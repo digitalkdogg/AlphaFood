@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Optional
 
 import httpx
 
@@ -18,7 +17,7 @@ SCHEMA_DESCRIPTION = """
 Return a JSON object with exactly these fields:
 {
   "is_recipe": <boolean: true if the page contains an actual recipe with ingredients and numbered instructions>,
-  "title": <string: recipe title>,
+  "title": <string: recipe title or page title if not a recipe>,
   "ingredients": [{"quantity": <string>, "unit": <string>, "item": <string>}],
   "instructions": [<string: each step as a complete sentence>],
   "prep_time": <integer minutes or null>,
@@ -28,7 +27,7 @@ Return a JSON object with exactly these fields:
   "mentions_mammal_ingredients": <boolean: true if any ingredient mentions beef, pork, lamb, venison, bison, buffalo, rabbit, dairy (milk, cheese, butter, cream, yogurt, whey), gelatin, lard, rennet, tallow, or other mammal-derived ingredients>
 }
 
-If is_recipe is false, all other fields may be empty/null.
+If is_recipe is false, still populate "title" with whatever the page is actually about.
 """
 
 
@@ -45,13 +44,14 @@ async def warmup() -> None:
         logger.warning(f"Ollama warmup failed (will proceed anyway): {e}")
 
 
-async def extract_recipe(text: str) -> Optional[dict]:
+async def extract_recipe(text: str) -> tuple[dict | None, str]:
+    """Return (recipe_data, skip_reason). recipe_data is None when skipped."""
     truncated = text[:6000]
     prompt = f"{SCHEMA_DESCRIPTION}\n\nPage content:\n{truncated}"
     return await _call_ollama(prompt)
 
 
-async def _call_ollama(prompt: str, retry: bool = True) -> Optional[dict]:
+async def _call_ollama(prompt: str, retry: bool = True) -> tuple[dict | None, str]:
     payload = {
         "model": settings.ollama_model,
         "prompt": prompt,
@@ -67,8 +67,10 @@ async def _call_ollama(prompt: str, retry: bool = True) -> Optional[dict]:
             raw = r.json().get("response", "")
         data = json.loads(raw)
         if not data.get("is_recipe", False):
-            return None
-        return data
+            title = (data.get("title") or "").strip()
+            reason = f"Not a recipe: {title}" if title else "Not a recipe"
+            return None, reason
+        return data, ""
     except json.JSONDecodeError:
         if retry:
             logger.warning("Ollama returned invalid JSON, retrying with stricter prompt")
@@ -77,7 +79,7 @@ async def _call_ollama(prompt: str, retry: bool = True) -> Optional[dict]:
                 retry=False,
             )
         logger.error("Ollama extraction failed after retry")
-        return None
+        return None, "Ollama returned invalid JSON"
     except Exception as e:
         logger.error(f"Ollama call failed: {e}")
-        return None
+        return None, "Ollama call failed"

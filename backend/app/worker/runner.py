@@ -43,14 +43,17 @@ async def _process_url(
             image_url = _extract_image_url(html)
             cleaned = extract_text(html)
             if not cleaned:
+                existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
+                if not existing_skip.scalar_one_or_none():
+                    db.add(SkippedUrl(source_id=source_id, url=url, reason="No extractable text"))
                 run.recipes_skipped_non_recipe += 1
                 return
 
-            data = await extract_recipe(cleaned)
+            data, skip_reason = await extract_recipe(cleaned)
             if data is None:
                 existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
                 if not existing_skip.scalar_one_or_none():
-                    db.add(SkippedUrl(source_id=source_id, url=url))
+                    db.add(SkippedUrl(source_id=source_id, url=url, reason=skip_reason))
                 run.recipes_skipped_non_recipe += 1
                 return
 

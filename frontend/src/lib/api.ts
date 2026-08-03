@@ -200,6 +200,7 @@ export interface SkippedUrl {
   id: string;
   source_id: string;
   url: string;
+  reason: string | null;
   skipped_at: string;
 }
 

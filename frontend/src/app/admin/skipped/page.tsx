@@ -76,8 +76,9 @@ export default function SkippedUrlsPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">URL</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600 w-40">Source</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600 w-40">Skipped</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 w-64">Reason</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 w-36">Source</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 w-28">Skipped</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
             </thead>
@@ -89,14 +90,25 @@ export default function SkippedUrlsPage() {
                       href={item.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-brand-600 hover:underline truncate block max-w-xl"
+                      className="text-brand-600 hover:underline truncate block max-w-xs"
                       title={item.url}
                     >
                       {item.url}
                     </a>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{sourceName(item.source_id)}</td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      item.reason?.startsWith("Not a recipe")
+                        ? "bg-yellow-50 text-yellow-700"
+                        : item.reason?.startsWith("Ollama")
+                        ? "bg-red-50 text-red-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {item.reason ?? "Unknown"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 text-sm">{sourceName(item.source_id)}</td>
+                  <td className="px-4 py-3 text-gray-500 text-sm">
                     {new Date(item.skipped_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-right">

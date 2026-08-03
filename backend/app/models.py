@@ -83,6 +83,7 @@ class SkippedUrl(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="CASCADE"), nullable=False)
     url = Column(String, unique=True, nullable=False, index=True)
+    reason = Column(String, nullable=True)
     skipped_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     source = relationship("Source", back_populates="skipped_urls")

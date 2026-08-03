@@ -126,6 +126,7 @@ class SkippedUrlOut(BaseModel):
     id: uuid.UUID
     source_id: uuid.UUID
     url: str
+    reason: Optional[str]
     skipped_at: datetime
 
 
