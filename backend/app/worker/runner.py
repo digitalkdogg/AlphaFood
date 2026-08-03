@@ -46,6 +46,8 @@ async def _process_url(
                 return
 
             data = await extract_recipe(cleaned)
+            if settings.ollama_cooldown_seconds > 0:
+                await asyncio.sleep(settings.ollama_cooldown_seconds)
             if data is None:
                 run.recipes_skipped_non_recipe += 1
                 return

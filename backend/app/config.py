@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1:8b"
     scrape_interval_hours: int = 24
     scrape_concurrency: int = 3
+    ollama_cooldown_seconds: int = 0
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
