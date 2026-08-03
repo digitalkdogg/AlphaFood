@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.models import Source, Recipe, ScrapeRun, ScrapeStatus
 from app.scrapers import get_adapter
 from app.extractors.cleaner import extract_text
-from app.extractors.ollama import extract_recipe
+from app.extractors.ollama import extract_recipe, warmup as ollama_warmup
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -112,6 +112,7 @@ async def run_scrape_for_source(source_id: str, run_id: str, db: AsyncSession):
         return
 
     try:
+        await ollama_warmup()
         adapter = get_adapter(source)
         candidate_urls = await adapter.fetch_candidate_urls()
 

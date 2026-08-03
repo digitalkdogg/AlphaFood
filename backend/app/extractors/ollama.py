@@ -32,6 +32,19 @@ If is_recipe is false, all other fields may be empty/null.
 """
 
 
+async def warmup() -> None:
+    """Load the model into RAM before scraping starts so the first real request doesn't cold-load."""
+    try:
+        async with httpx.AsyncClient(timeout=300) as client:
+            await client.post(
+                f"{settings.ollama_url}/api/generate",
+                json={"model": settings.ollama_model, "prompt": "hi", "stream": False, "keep_alive": "10m"},
+            )
+        logger.info("Ollama model warmed up")
+    except Exception as e:
+        logger.warning(f"Ollama warmup failed (will proceed anyway): {e}")
+
+
 async def extract_recipe(text: str) -> Optional[dict]:
     truncated = text[:6000]
     prompt = f"{SCHEMA_DESCRIPTION}\n\nPage content:\n{truncated}"
