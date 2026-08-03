@@ -39,6 +39,7 @@ async def _process_url(
     async with semaphore:
         try:
             html = await adapter.fetch_raw_html(url)
+
             image_url = _extract_image_url(html)
             cleaned = extract_text(html)
             if not cleaned:
@@ -46,8 +47,6 @@ async def _process_url(
                 return
 
             data = await extract_recipe(cleaned)
-            if settings.ollama_cooldown_seconds > 0:
-                await asyncio.sleep(settings.ollama_cooldown_seconds)
             if data is None:
                 run.recipes_skipped_non_recipe += 1
                 return
@@ -92,6 +91,9 @@ async def _process_url(
 
         except Exception as e:
             logger.error(f"Failed to process {url}: {e}")
+        finally:
+            if settings.ollama_cooldown_seconds > 0:
+                await asyncio.sleep(settings.ollama_cooldown_seconds)
 
 
 async def run_scrape_for_source(source_id: str, run_id: str, db: AsyncSession):
