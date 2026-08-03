@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models import Source, Recipe, ScrapeRun, ScrapeStatus
+from app.models import Source, Recipe, ScrapeRun, ScrapeStatus, SkippedUrl
 from app.scrapers import get_adapter
 from app.extractors.cleaner import extract_text
 from app.extractors.ollama import extract_recipe, warmup as ollama_warmup
@@ -48,6 +48,9 @@ async def _process_url(
 
             data = await extract_recipe(cleaned)
             if data is None:
+                existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
+                if not existing_skip.scalar_one_or_none():
+                    db.add(SkippedUrl(source_id=source_id, url=url))
                 run.recipes_skipped_non_recipe += 1
                 return
 
@@ -116,12 +119,18 @@ async def run_scrape_for_source(source_id: str, run_id: str, db: AsyncSession):
         adapter = get_adapter(source)
         candidate_urls = await adapter.fetch_candidate_urls()
 
-        # Deduplicate against existing recipes
+        # Deduplicate against existing recipes and previously skipped URLs
         existing_result = await db.execute(
             select(Recipe.source_url).where(Recipe.source_id == source.id)
         )
         existing_urls = {row[0] for row in existing_result.all()}
-        new_urls = [u for u in candidate_urls if u not in existing_urls]
+
+        skipped_result = await db.execute(
+            select(SkippedUrl.url).where(SkippedUrl.source_id == source.id)
+        )
+        skipped_urls = {row[0] for row in skipped_result.all()}
+
+        new_urls = [u for u in candidate_urls if u not in existing_urls and u not in skipped_urls]
 
         run.recipes_found = len(new_urls)
         await db.commit()

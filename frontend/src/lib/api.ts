@@ -194,6 +194,38 @@ export async function getPublicRecipe(id: string): Promise<Recipe> {
   return apiFetch(`/api/recipes/${id}`);
 }
 
+// ── Skipped URLs ──────────────────────────────────────────────────────────────
+
+export interface SkippedUrl {
+  id: string;
+  source_id: string;
+  url: string;
+  skipped_at: string;
+}
+
+export interface SkippedUrlsPage {
+  items: SkippedUrl[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getSkippedUrls(params: {
+  source_id?: string;
+  page?: number;
+  limit?: number;
+}): Promise<SkippedUrlsPage> {
+  const q = new URLSearchParams();
+  if (params.source_id) q.set("source_id", params.source_id);
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  return apiFetch(`/api/admin/skipped/?${q}`);
+}
+
+export async function removeSkippedUrl(id: string): Promise<void> {
+  return apiFetch(`/api/admin/skipped/${id}`, { method: "DELETE" });
+}
+
 // ── Public sources (no auth required) ────────────────────────────────────────
 
 export async function getPublicSources(): Promise<Source[]> {

@@ -50,6 +50,7 @@ class Source(Base):
 
     recipes = relationship("Recipe", back_populates="source", cascade="all, delete-orphan")
     scrape_runs = relationship("ScrapeRun", back_populates="source", cascade="all, delete-orphan")
+    skipped_urls = relationship("SkippedUrl", back_populates="source", cascade="all, delete-orphan")
 
 
 class Recipe(Base):
@@ -74,6 +75,17 @@ class Recipe(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     source = relationship("Source", back_populates="recipes")
+
+
+class SkippedUrl(Base):
+    __tablename__ = "skipped_urls"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="CASCADE"), nullable=False)
+    url = Column(String, unique=True, nullable=False, index=True)
+    skipped_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    source = relationship("Source", back_populates="skipped_urls")
 
 
 class ScrapeRun(Base):

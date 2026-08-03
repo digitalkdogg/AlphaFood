@@ -119,3 +119,18 @@ class RecipesPage(BaseModel):
     total: int
     page: int
     limit: int
+
+
+class SkippedUrlOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    source_id: uuid.UUID
+    url: str
+    skipped_at: datetime
+
+
+class SkippedUrlsPage(BaseModel):
+    items: list[SkippedUrlOut]
+    total: int
+    page: int
+    limit: int

@@ -15,6 +15,7 @@ from app.routers.scrape import router as scrape_router
 from app.routers.recipes import admin_router as admin_recipes_router
 from app.routers.recipes import public_router as public_recipes_router
 from app.routers.public import router as public_router
+from app.routers.skipped import router as skipped_router
 from app.worker.scheduler import start_scheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +74,7 @@ app.include_router(scrape_router)
 app.include_router(admin_recipes_router)
 app.include_router(public_recipes_router)
 app.include_router(public_router)
+app.include_router(skipped_router)
 
 
 @app.get("/api/health")
