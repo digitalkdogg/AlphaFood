@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -15,6 +16,25 @@ from app.extractors.ollama import extract_recipe, warmup as ollama_warmup
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _to_int_minutes(val) -> Optional[int]:
+    if val is None:
+        return None
+    if isinstance(val, int):
+        return val
+    if isinstance(val, str):
+        m = re.search(r'\d+', val)
+        return int(m.group()) if m else None
+    return None
+
+
+def _to_str_list(val) -> Optional[list]:
+    if val is None:
+        return None
+    if isinstance(val, list):
+        return [str(item) for item in val if item is not None and str(item).strip()]
+    return None
 
 
 def _extract_image_url(html: str) -> Optional[str]:
@@ -68,9 +88,9 @@ async def _process_url(
             if existing:
                 existing.title = data.get("title", existing.title) or existing.title
                 existing.ingredients = data.get("ingredients")
-                existing.instructions = data.get("instructions")
-                existing.prep_time = data.get("prep_time")
-                existing.cook_time = data.get("cook_time")
+                existing.instructions = _to_str_list(data.get("instructions"))
+                existing.prep_time = _to_int_minutes(data.get("prep_time"))
+                existing.cook_time = _to_int_minutes(data.get("cook_time"))
                 existing.servings = data.get("servings")
                 existing.image_url = image_url or existing.image_url
                 existing.is_dairy_free = data.get("is_dairy_free")
@@ -85,9 +105,9 @@ async def _process_url(
                     source_url=url,
                     title=data.get("title", "Untitled Recipe"),
                     ingredients=data.get("ingredients"),
-                    instructions=data.get("instructions"),
-                    prep_time=data.get("prep_time"),
-                    cook_time=data.get("cook_time"),
+                    instructions=_to_str_list(data.get("instructions")),
+                    prep_time=_to_int_minutes(data.get("prep_time")),
+                    cook_time=_to_int_minutes(data.get("cook_time")),
                     servings=data.get("servings"),
                     image_url=image_url,
                     is_dairy_free=data.get("is_dairy_free"),
@@ -101,6 +121,7 @@ async def _process_url(
 
         except Exception as e:
             logger.error(f"Failed to process {url}: {e}")
+            await db.rollback()
         finally:
             if settings.ollama_cooldown_seconds > 0:
                 await asyncio.sleep(settings.ollama_cooldown_seconds)
