@@ -58,6 +58,10 @@ async def _process_url(
                 return
 
             now = datetime.now(timezone.utc)
+
+            raw_mammal = data.get("mentions_mammal_ingredients", False)
+            mentions_mammal = bool(raw_mammal) if not isinstance(raw_mammal, bool) else raw_mammal
+
             result = await db.execute(select(Recipe).where(Recipe.source_url == url))
             existing = result.scalar_one_or_none()
 
@@ -70,7 +74,7 @@ async def _process_url(
                 existing.servings = data.get("servings")
                 existing.image_url = image_url or existing.image_url
                 existing.is_dairy_free = data.get("is_dairy_free")
-                existing.mentions_mammal_ingredients = data.get("mentions_mammal_ingredients", False)
+                existing.mentions_mammal_ingredients = mentions_mammal
                 existing.needs_review = True
                 existing.extracted_at = now
                 existing.updated_at = now
@@ -87,7 +91,7 @@ async def _process_url(
                     servings=data.get("servings"),
                     image_url=image_url,
                     is_dairy_free=data.get("is_dairy_free"),
-                    mentions_mammal_ingredients=data.get("mentions_mammal_ingredients", False),
+                    mentions_mammal_ingredients=mentions_mammal,
                     needs_review=True,
                     published=False,
                     extracted_at=now,
