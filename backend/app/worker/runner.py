@@ -63,18 +63,22 @@ async def _process_url(
             image_url = _extract_image_url(html)
             cleaned = extract_text(html)
             if not cleaned:
-                existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
-                if not existing_skip.scalar_one_or_none():
-                    db.add(SkippedUrl(source_id=source_id, url=url, reason="No extractable text"))
+                async with db.begin_nested():
+                    existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
+                    if not existing_skip.scalar_one_or_none():
+                        db.add(SkippedUrl(source_id=source_id, url=url, reason="No extractable text"))
                 run.recipes_skipped_non_recipe += 1
+                await db.commit()
                 return
 
             data, skip_reason = await extract_recipe(cleaned)
             if data is None:
-                existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
-                if not existing_skip.scalar_one_or_none():
-                    db.add(SkippedUrl(source_id=source_id, url=url, reason=skip_reason))
+                async with db.begin_nested():
+                    existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
+                    if not existing_skip.scalar_one_or_none():
+                        db.add(SkippedUrl(source_id=source_id, url=url, reason=skip_reason))
                 run.recipes_skipped_non_recipe += 1
+                await db.commit()
                 return
 
             now = datetime.now(timezone.utc)
@@ -82,46 +86,51 @@ async def _process_url(
             raw_mammal = data.get("mentions_mammal_ingredients", False)
             mentions_mammal = bool(raw_mammal) if not isinstance(raw_mammal, bool) else raw_mammal
 
-            result = await db.execute(select(Recipe).where(Recipe.source_url == url))
-            existing = result.scalar_one_or_none()
+            raw_servings = data.get("servings")
+            servings = str(raw_servings) if raw_servings is not None else None
 
-            if existing:
-                existing.title = data.get("title", existing.title) or existing.title
-                existing.ingredients = data.get("ingredients")
-                existing.instructions = _to_str_list(data.get("instructions"))
-                existing.prep_time = _to_int_minutes(data.get("prep_time"))
-                existing.cook_time = _to_int_minutes(data.get("cook_time"))
-                existing.servings = data.get("servings")
-                existing.image_url = image_url or existing.image_url
-                existing.is_dairy_free = data.get("is_dairy_free")
-                existing.mentions_mammal_ingredients = mentions_mammal
-                existing.needs_review = True
-                existing.extracted_at = now
-                existing.updated_at = now
-                run.recipes_updated += 1
-            else:
-                recipe = Recipe(
-                    source_id=source_id,
-                    source_url=url,
-                    title=data.get("title", "Untitled Recipe"),
-                    ingredients=data.get("ingredients"),
-                    instructions=_to_str_list(data.get("instructions")),
-                    prep_time=_to_int_minutes(data.get("prep_time")),
-                    cook_time=_to_int_minutes(data.get("cook_time")),
-                    servings=data.get("servings"),
-                    image_url=image_url,
-                    is_dairy_free=data.get("is_dairy_free"),
-                    mentions_mammal_ingredients=mentions_mammal,
-                    needs_review=True,
-                    published=False,
-                    extracted_at=now,
-                )
-                db.add(recipe)
-                run.recipes_added += 1
+            async with db.begin_nested():
+                result = await db.execute(select(Recipe).where(Recipe.source_url == url))
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    existing.title = data.get("title", existing.title) or existing.title
+                    existing.ingredients = data.get("ingredients")
+                    existing.instructions = _to_str_list(data.get("instructions"))
+                    existing.prep_time = _to_int_minutes(data.get("prep_time"))
+                    existing.cook_time = _to_int_minutes(data.get("cook_time"))
+                    existing.servings = servings
+                    existing.image_url = image_url or existing.image_url
+                    existing.is_dairy_free = data.get("is_dairy_free")
+                    existing.mentions_mammal_ingredients = mentions_mammal
+                    existing.needs_review = True
+                    existing.extracted_at = now
+                    existing.updated_at = now
+                    run.recipes_updated += 1
+                else:
+                    recipe = Recipe(
+                        source_id=source_id,
+                        source_url=url,
+                        title=data.get("title", "Untitled Recipe"),
+                        ingredients=data.get("ingredients"),
+                        instructions=_to_str_list(data.get("instructions")),
+                        prep_time=_to_int_minutes(data.get("prep_time")),
+                        cook_time=_to_int_minutes(data.get("cook_time")),
+                        servings=servings,
+                        image_url=image_url,
+                        is_dairy_free=data.get("is_dairy_free"),
+                        mentions_mammal_ingredients=mentions_mammal,
+                        needs_review=True,
+                        published=False,
+                        extracted_at=now,
+                    )
+                    db.add(recipe)
+                    run.recipes_added += 1
+
+            await db.commit()
 
         except Exception as e:
             logger.error(f"Failed to process {url}: {e}")
-            await db.rollback()
         finally:
             if settings.ollama_cooldown_seconds > 0:
                 await asyncio.sleep(settings.ollama_cooldown_seconds)
