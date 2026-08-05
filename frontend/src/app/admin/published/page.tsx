@@ -80,23 +80,23 @@ export default function PublishedRecipesPage() {
           {recipes.map((recipe) => (
             <div key={recipe.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex gap-0">
               {recipe.image_url && (
-                <div className="relative w-28 shrink-0">
+                <div className="relative w-24 sm:w-28 shrink-0">
                   <Image src={recipe.image_url} alt={recipe.title} fill className="object-cover" unoptimized />
                 </div>
               )}
-              <div className="flex-1 p-4">
-                <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 p-3 sm:p-4 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
                   <div className="min-w-0">
-                    <h3 className="font-semibold truncate">{recipe.title}</h3>
+                    <h3 className="font-semibold text-sm sm:text-base leading-snug truncate">{recipe.title}</h3>
                     <a
                       href={recipe.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-brand-600 hover:underline truncate block max-w-sm mt-0.5"
+                      className="text-xs text-brand-600 hover:underline truncate block max-w-xs mt-0.5"
                     >
                       {recipe.source_url}
                     </a>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-1.5">
                       {recipe.is_dairy_free === true && (
                         <span className="bg-brand-100 text-brand-800 text-xs px-2 py-0.5 rounded-full">Dairy-Free</span>
                       )}
@@ -108,7 +108,7 @@ export default function PublishedRecipesPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex flex-wrap gap-2 shrink-0">
                     <button
                       onClick={() => handleReprocess(recipe.id, recipe.title)}
                       disabled={reprocessing.has(recipe.id)}

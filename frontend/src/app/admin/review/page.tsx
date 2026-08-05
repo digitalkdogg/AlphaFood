@@ -27,7 +27,7 @@ function RecipePreview({ id }: { id: string }) {
   const instructions = Array.isArray(recipe.instructions) ? recipe.instructions : [];
 
   return (
-    <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4 text-sm">
+    <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
       {recipe.mentions_mammal_ingredients && (
         <div className="col-span-2 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg font-medium">
           ⚠ Mammal ingredients detected — review carefully before publishing
@@ -184,19 +184,19 @@ export default function ReviewQueuePage() {
               <div key={recipe.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="flex gap-0">
                   {recipe.image_url && (
-                    <div className="relative w-32 shrink-0">
+                    <div className="relative w-24 sm:w-32 shrink-0">
                       <Image src={recipe.image_url} alt={recipe.title} fill className="object-cover" unoptimized />
                     </div>
                   )}
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold">{recipe.title}</h3>
+                  <div className="flex-1 p-3 sm:p-4 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base leading-snug">{recipe.title}</h3>
                         <a href={recipe.source_url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-brand-600 hover:underline truncate block max-w-sm mt-0.5">
+                          className="text-xs text-brand-600 hover:underline truncate block max-w-xs mt-0.5">
                           {recipe.source_url}
                         </a>
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-1.5">
                           {recipe.is_dairy_free === true && (
                             <span className="bg-brand-100 text-brand-800 text-xs px-2 py-0.5 rounded-full">Dairy-Free</span>
                           )}
@@ -208,12 +208,12 @@ export default function ReviewQueuePage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex flex-wrap gap-2 shrink-0">
                         <button
                           onClick={() => toggleExpand(recipe.id)}
                           className="bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
                         >
-                          {isExpanded ? "Hide Preview" : "Preview"}
+                          {isExpanded ? "Hide" : "Preview"}
                         </button>
                         <button onClick={() => handlePublish(recipe.id)}
                           className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">

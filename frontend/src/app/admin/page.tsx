@@ -67,14 +67,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Dashboard</h2>
         <button
           onClick={handleScrapeAll}
           disabled={scraping}
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors self-start sm:self-auto"
         >
-          {scraping ? "Starting…" : "Scrape All Active Sources"}
+          {scraping ? "Starting…" : "Scrape All Sources"}
         </button>
       </div>
 
@@ -98,30 +98,32 @@ export default function AdminDashboard() {
         {runs.length === 0 ? (
           <p className="text-center text-gray-400 text-sm py-10">No scrape runs yet.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <tr>
-                <th className="px-4 py-2 text-left">Started</th>
-                <th className="px-4 py-2 text-left">Status</th>
-                <th className="px-4 py-2 text-right">Found</th>
-                <th className="px-4 py-2 text-right">Added</th>
-                <th className="px-4 py-2 text-right">Updated</th>
-                <th className="px-4 py-2 text-right">Skipped</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {runs.map((run) => (
-                <tr key={run.id}>
-                  <td className="px-4 py-2 text-gray-500">{new Date(run.started_at).toLocaleString()}</td>
-                  <td className="px-4 py-2">{statusBadge(run.status)}</td>
-                  <td className="px-4 py-2 text-right">{run.recipes_found}</td>
-                  <td className="px-4 py-2 text-right text-green-700">{run.recipes_added}</td>
-                  <td className="px-4 py-2 text-right text-blue-700">{run.recipes_updated}</td>
-                  <td className="px-4 py-2 text-right text-gray-400">{run.recipes_skipped_non_recipe}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[480px]">
+              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th className="px-4 py-2 text-left">Started</th>
+                  <th className="px-4 py-2 text-left">Status</th>
+                  <th className="px-4 py-2 text-right">Found</th>
+                  <th className="px-4 py-2 text-right">Added</th>
+                  <th className="px-4 py-2 text-right">Updated</th>
+                  <th className="px-4 py-2 text-right">Skipped</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {runs.map((run) => (
+                  <tr key={run.id}>
+                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">{new Date(run.started_at).toLocaleString()}</td>
+                    <td className="px-4 py-2">{statusBadge(run.status)}</td>
+                    <td className="px-4 py-2 text-right">{run.recipes_found}</td>
+                    <td className="px-4 py-2 text-right text-green-700">{run.recipes_added}</td>
+                    <td className="px-4 py-2 text-right text-blue-700">{run.recipes_updated}</td>
+                    <td className="px-4 py-2 text-right text-gray-400">{run.recipes_skipped_non_recipe}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
