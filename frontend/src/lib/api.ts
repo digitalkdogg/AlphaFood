@@ -158,6 +158,10 @@ export async function getAdminRecipes(params: {
   return apiFetch(`/api/admin/recipes/?${q}`);
 }
 
+export async function getAdminRecipe(id: string): Promise<Recipe> {
+  return apiFetch(`/api/admin/recipes/${id}`);
+}
+
 export async function publishRecipe(id: string): Promise<Recipe> {
   return apiFetch(`/api/admin/recipes/${id}/publish`, { method: "PUT" });
 }
@@ -168,6 +172,10 @@ export async function rejectRecipe(id: string): Promise<Recipe> {
 
 export async function deleteRecipe(id: string): Promise<void> {
   return apiFetch(`/api/admin/recipes/${id}`, { method: "DELETE" });
+}
+
+export async function reprocessRecipe(id: string): Promise<Recipe> {
+  return apiFetch(`/api/admin/recipes/${id}/reprocess`, { method: "POST" });
 }
 
 // ── Public recipes ────────────────────────────────────────────────────────────

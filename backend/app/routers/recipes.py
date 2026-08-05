@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +39,19 @@ async def admin_list_recipes(
     result = await db.execute(q)
     items = result.scalars().all()
     return RecipesPage(items=items, total=total, page=page, limit=limit)
+
+
+@admin_router.get("/{recipe_id}", response_model=RecipeOut)
+async def get_recipe_admin(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return recipe
 
 
 @admin_router.put("/{recipe_id}/publish", response_model=RecipeOut)
@@ -89,6 +102,79 @@ async def delete_recipe(
         raise HTTPException(status_code=404, detail="Recipe not found")
     await db.delete(recipe)
     await db.commit()
+
+
+@admin_router.post("/{recipe_id}/reprocess", response_model=RecipeOut)
+async def reprocess_recipe(
+    recipe_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    background_tasks.add_task(_do_reprocess, str(recipe_id))
+    recipe.needs_review = True
+    recipe.published = False
+    recipe.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(recipe)
+    return recipe
+
+
+async def _do_reprocess(recipe_id: str):
+    from app.database import AsyncSessionLocal
+    from app.worker.runner import _process_url, _extract_image_url
+    from app.extractors.cleaner import extract_text
+    from app.extractors.ollama import extract_recipe
+    from app.scrapers.base import HEADERS
+    from app.worker.runner import _to_int_minutes, _to_str_list
+    import httpx
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Recipe).where(Recipe.id == uuid.UUID(recipe_id)))
+        recipe = result.scalar_one_or_none()
+        if not recipe:
+            return
+        try:
+            async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True, timeout=30) as client:
+                r = await client.get(recipe.source_url)
+                r.raise_for_status()
+                html = r.text
+
+            image_url = _extract_image_url(html)
+            cleaned = extract_text(html)
+            if not cleaned:
+                return
+
+            data, _ = await extract_recipe(cleaned)
+            if data is None:
+                return
+
+            now = datetime.now(timezone.utc)
+            raw_mammal = data.get("mentions_mammal_ingredients", False)
+            mentions_mammal = bool(raw_mammal) if not isinstance(raw_mammal, bool) else raw_mammal
+            raw_servings = data.get("servings")
+
+            recipe.title = data.get("title") or recipe.title
+            recipe.ingredients = data.get("ingredients")
+            recipe.instructions = _to_str_list(data.get("instructions"))
+            recipe.prep_time = _to_int_minutes(data.get("prep_time"))
+            recipe.cook_time = _to_int_minutes(data.get("cook_time"))
+            recipe.servings = str(raw_servings) if raw_servings is not None else None
+            recipe.image_url = image_url or recipe.image_url
+            recipe.is_dairy_free = data.get("is_dairy_free")
+            recipe.mentions_mammal_ingredients = mentions_mammal
+            recipe.needs_review = True
+            recipe.published = False
+            recipe.extracted_at = now
+            recipe.updated_at = now
+            await db.commit()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Reprocess failed for {recipe_id}: {e}")
 
 
 # ── Public endpoints ─────────────────────────────────────────────────────────

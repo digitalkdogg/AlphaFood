@@ -31,6 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin" className="text-brand-100 hover:text-white transition-colors">Dashboard</Link>
             <Link href="/admin/sources" className="text-brand-100 hover:text-white transition-colors">Sources</Link>
             <Link href="/admin/review" className="text-brand-100 hover:text-white transition-colors">Review Queue</Link>
+            <Link href="/admin/published" className="text-brand-100 hover:text-white transition-colors">Published</Link>
             <Link href="/admin/skipped" className="text-brand-100 hover:text-white transition-colors">Skipped URLs</Link>
           </nav>
         </div>
