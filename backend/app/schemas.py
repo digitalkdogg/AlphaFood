@@ -88,6 +88,7 @@ class RecipeOut(BaseModel):
     image_url: Optional[str]
     is_dairy_free: Optional[bool]
     mentions_mammal_ingredients: bool
+    disclaimer: Optional[str] = None
     needs_review: bool
     published: bool
     extracted_at: Optional[datetime]

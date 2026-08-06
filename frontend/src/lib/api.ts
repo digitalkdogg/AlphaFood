@@ -18,6 +18,11 @@ async function apiFetch<T>(
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("alphafood_token");
+      window.location.href = "/admin/login";
+      return undefined as T;
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || res.statusText);
   }
@@ -74,6 +79,7 @@ export interface Recipe {
   image_url: string | null;
   is_dairy_free: boolean | null;
   mentions_mammal_ingredients: boolean;
+  disclaimer: string | null;
   needs_review: boolean;
   published: boolean;
   extracted_at: string | null;

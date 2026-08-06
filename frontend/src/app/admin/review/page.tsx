@@ -28,7 +28,12 @@ function RecipePreview({ id }: { id: string }) {
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-      {recipe.mentions_mammal_ingredients && (
+      {recipe.disclaimer && (
+        <div className="col-span-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 rounded-lg font-medium">
+          ⚠ Ambiguous ingredients — {recipe.disclaimer}
+        </div>
+      )}
+      {recipe.mentions_mammal_ingredients && !recipe.disclaimer && (
         <div className="col-span-2 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg font-medium">
           ⚠ Mammal ingredients detected — review carefully before publishing
         </div>

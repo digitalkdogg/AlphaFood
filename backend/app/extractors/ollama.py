@@ -24,7 +24,10 @@ Return a JSON object with exactly these fields:
   "cook_time": <integer minutes or null>,
   "servings": <string or null>,
   "is_dairy_free": <boolean or null (null if cannot determine)>,
-  "mentions_mammal_ingredients": <boolean: true if any ingredient mentions beef, pork, lamb, venison, bison, buffalo, rabbit, dairy (milk, cheese, butter, cream, yogurt, whey), gelatin, lard, rennet, tallow, or other mammal-derived ingredients>
+  "mammal_status": <string: exactly one of "safe", "questionable", or "contains_mammal".
+    - "contains_mammal": one or more ingredients are CLEARLY and DEFINITIVELY a mammal product with no plant-based ambiguity — beef, pork, veal, bacon, ham, lamb, venison, bison, buffalo, goat meat, rabbit, lard, tallow, suet, bone broth (unless specified vegetable), gelatin (unless specified plant-based), rennet.
+    - "questionable": one or more ingredients COULD be mammal-derived OR plant-based depending on the brand used — butter (could be vegan butter), milk (could be oat/almond/soy milk), cream (could be coconut cream), cheese (could be vegan cheese), yogurt (could be coconut yogurt), broth or stock (could be vegetable), ghee (could be vegan ghee).
+    - "safe": no mammal-derived ingredients detected, or all ambiguous ingredients are explicitly specified as plant-based (e.g. "oat milk", "vegan butter", "vegetable broth").>
 }
 
 If is_recipe is false, still populate "title" with whatever the page is actually about.

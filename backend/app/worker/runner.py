@@ -83,8 +83,26 @@ async def _process_url(
 
             now = datetime.now(timezone.utc)
 
-            raw_mammal = data.get("mentions_mammal_ingredients", False)
-            mentions_mammal = bool(raw_mammal) if not isinstance(raw_mammal, bool) else raw_mammal
+            mammal_status = str(data.get("mammal_status", "safe")).lower()
+            if mammal_status not in ("safe", "questionable", "contains_mammal"):
+                mammal_status = "safe"
+
+            if mammal_status == "contains_mammal":
+                async with db.begin_nested():
+                    existing_skip = await db.execute(select(SkippedUrl).where(SkippedUrl.url == url))
+                    if not existing_skip.scalar_one_or_none():
+                        db.add(SkippedUrl(source_id=source_id, url=url, reason="Contains mammal ingredients"))
+                run.recipes_skipped_non_recipe += 1
+                await db.commit()
+                return
+
+            mentions_mammal = mammal_status == "questionable"
+            disclaimer = (
+                "Some ingredients in this recipe may be mammal-derived depending on the brand used "
+                "(e.g. butter, milk, cream, cheese, or broth). Verify that plant-based versions are "
+                "used before serving to someone with Alpha-Gal Syndrome."
+                if mammal_status == "questionable" else None
+            )
 
             raw_servings = data.get("servings")
             servings = str(raw_servings) if raw_servings is not None else None
@@ -103,6 +121,7 @@ async def _process_url(
                     existing.image_url = image_url or existing.image_url
                     existing.is_dairy_free = data.get("is_dairy_free")
                     existing.mentions_mammal_ingredients = mentions_mammal
+                    existing.disclaimer = disclaimer
                     existing.needs_review = True
                     existing.extracted_at = now
                     existing.updated_at = now
@@ -120,6 +139,7 @@ async def _process_url(
                         image_url=image_url,
                         is_dairy_free=data.get("is_dairy_free"),
                         mentions_mammal_ingredients=mentions_mammal,
+                        disclaimer=disclaimer,
                         needs_review=True,
                         published=False,
                         extracted_at=now,

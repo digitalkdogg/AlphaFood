@@ -68,6 +68,7 @@ class Recipe(Base):
     image_url = Column(String, nullable=True)
     is_dairy_free = Column(Boolean, nullable=True)
     mentions_mammal_ingredients = Column(Boolean, default=False, nullable=False)
+    disclaimer = Column(Text, nullable=True)
     needs_review = Column(Boolean, default=True, nullable=False)
     published = Column(Boolean, default=False, nullable=False)
     extracted_at = Column(DateTime(timezone=True), nullable=True)
