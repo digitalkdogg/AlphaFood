@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSkippedUrls, removeSkippedUrl, markSkippedUrlPermanent, getSources, SkippedUrl, Source } from "@/lib/api";
+import { getSkippedUrls, removeSkippedUrl, markSkippedUrlPermanent, unmarkSkippedUrlPermanent, getSources, SkippedUrl, Source } from "@/lib/api";
 
 const PAGE_SIZE = 50;
 
@@ -37,8 +37,9 @@ export default function SkippedUrlsPage() {
   const [page, setPage] = useState(1);
   const [sources, setSources] = useState<Source[]>([]);
   const [sourceFilter, setSourceFilter] = useState("");
+  const [permanentFilter, setPermanentFilter] = useState<"all" | "normal" | "permanent">("all");
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<Record<string, "requeue" | "permanent">>({});
+  const [busy, setBusy] = useState<Record<string, "requeue" | "permanent" | "undo">>({});
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -47,11 +48,16 @@ export default function SkippedUrlsPage() {
 
   useEffect(() => {
     setLoading(true);
-    getSkippedUrls({ source_id: sourceFilter || undefined, page, limit: PAGE_SIZE })
+    getSkippedUrls({
+      source_id: sourceFilter || undefined,
+      permanent: permanentFilter === "all" ? undefined : permanentFilter === "permanent",
+      page,
+      limit: PAGE_SIZE,
+    })
       .then((data) => { setItems(data.items); setTotal(data.total); })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page, sourceFilter]);
+  }, [page, sourceFilter, permanentFilter]);
 
   function sourceName(id: string) {
     return sources.find((s) => s.id === id)?.name ?? "Unknown source";
@@ -89,23 +95,49 @@ export default function SkippedUrlsPage() {
     }
   }
 
+  async function handleUndo(id: string) {
+    setBusy((b) => ({ ...b, [id]: "undo" }));
+    try {
+      const updated = await unmarkSkippedUrlPermanent(id);
+      setItems((prev) => prev.map((i) => i.id === id ? updated : i));
+      notify("Skip Forever removed — URL can now be re-queued");
+    } catch {
+      notify("Failed to undo permanent skip");
+    } finally {
+      setBusy((b) => { const n = { ...b }; delete n[id]; return n; });
+    }
+  }
+
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Skipped URLs</h1>
           <p className="text-sm text-gray-500 mt-0.5">{total} URL{total !== 1 ? "s" : ""} excluded from future scrape runs</p>
         </div>
-        <select
-          value={sourceFilter}
-          onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-        >
-          <option value="">All sources</option>
-          {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        <div className="flex gap-2 flex-wrap">
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+            {(["all", "normal", "permanent"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => { setPermanentFilter(v); setPage(1); }}
+                className={`px-3 py-2 font-medium transition-colors ${permanentFilter === v ? "bg-brand-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                {v === "all" ? "All" : v === "normal" ? "Normal" : "Skip Forever"}
+              </button>
+            ))}
+          </div>
+          <select
+            value={sourceFilter}
+            onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">All sources</option>
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
       </div>
 
       {toast && (
@@ -173,7 +205,13 @@ export default function SkippedUrlsPage() {
                       </button>
                     </>
                   ) : (
-                    <span className="text-xs text-gray-400 italic px-1">Permanently ignored</span>
+                    <button
+                      onClick={() => handleUndo(item.id)}
+                      disabled={isBusy}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium disabled:opacity-50 transition-colors"
+                    >
+                      {busy[item.id] === "undo" ? "Undoing…" : "Undo"}
+                    </button>
                   )}
                 </div>
               </div>

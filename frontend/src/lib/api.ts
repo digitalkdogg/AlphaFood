@@ -232,11 +232,13 @@ export interface SkippedUrlsPage {
 
 export async function getSkippedUrls(params: {
   source_id?: string;
+  permanent?: boolean;
   page?: number;
   limit?: number;
 }): Promise<SkippedUrlsPage> {
   const q = new URLSearchParams();
   if (params.source_id) q.set("source_id", params.source_id);
+  if (params.permanent !== undefined) q.set("permanent", String(params.permanent));
   if (params.page) q.set("page", String(params.page));
   if (params.limit) q.set("limit", String(params.limit));
   return apiFetch(`/api/admin/skipped/?${q}`);
@@ -248,6 +250,10 @@ export async function removeSkippedUrl(id: string): Promise<void> {
 
 export async function markSkippedUrlPermanent(id: string): Promise<SkippedUrl> {
   return apiFetch(`/api/admin/skipped/${id}/permanent`, { method: "PUT" });
+}
+
+export async function unmarkSkippedUrlPermanent(id: string): Promise<SkippedUrl> {
+  return apiFetch(`/api/admin/skipped/${id}/permanent`, { method: "DELETE" });
 }
 
 // ── Public sources (no auth required) ────────────────────────────────────────
