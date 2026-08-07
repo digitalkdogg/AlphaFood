@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from typing import Optional
@@ -45,6 +45,23 @@ async def list_runs(
         q = q.where(ScrapeRun.source_id == source_id)
     result = await db.execute(q)
     return result.scalars().all()
+
+
+@router.post("/runs/{run_id}/cancel", response_model=ScrapeRunOut)
+async def cancel_run(
+    run_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    from app.worker.runner import request_cancel
+    result = await db.execute(select(ScrapeRun).where(ScrapeRun.id == run_id))
+    run = result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=404, detail="Scrape run not found")
+    if run.status != ScrapeStatus.running:
+        raise HTTPException(status_code=400, detail="Run is not currently running")
+    request_cancel(str(run_id))
+    return run
 
 
 @router.get("/runs/{run_id}", response_model=ScrapeRunOut)

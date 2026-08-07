@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, ScrapeRun } from "@/lib/api";
+import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, cancelScrapeRun, ScrapeRun } from "@/lib/api";
 import Link from "next/link";
 
 function StatCard({ label, value, href }: { label: string; value: number | string; href?: string }) {
@@ -15,14 +15,15 @@ function StatCard({ label, value, href }: { label: string; value: number | strin
 }
 
 function statusBadge(status: ScrapeRun["status"]) {
-  const map = {
+  const map: Record<string, string> = {
     running: "bg-blue-100 text-blue-800",
     success: "bg-green-100 text-green-800",
     partial: "bg-yellow-100 text-yellow-800",
     error: "bg-red-100 text-red-800",
+    cancelled: "bg-gray-100 text-gray-600",
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status]}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] ?? "bg-gray-100 text-gray-600"}`}>
       {status}
     </span>
   );
@@ -32,6 +33,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ sources: 0, review: 0, published: 0 });
   const [runs, setRuns] = useState<ScrapeRun[]>([]);
   const [scraping, setScraping] = useState(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [toast, setToast] = useState("");
 
   async function loadData() {
@@ -50,6 +52,20 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => { loadData(); }, []);
+
+  async function handleCancel(runId: string) {
+    setCancelling(runId);
+    try {
+      await cancelScrapeRun(runId);
+      setToast("Cancellation requested — current URLs will finish then the run will stop");
+      setTimeout(() => setToast(""), 5000);
+      setTimeout(loadData, 3000);
+    } catch {
+      setToast("Failed to cancel scrape");
+    } finally {
+      setCancelling(null);
+    }
+  }
 
   async function handleScrapeAll() {
     setScraping(true);
@@ -108,6 +124,7 @@ export default function AdminDashboard() {
                   <th className="px-4 py-2 text-right">Added</th>
                   <th className="px-4 py-2 text-right">Updated</th>
                   <th className="px-4 py-2 text-right">Skipped</th>
+                  <th className="px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -119,6 +136,17 @@ export default function AdminDashboard() {
                     <td className="px-4 py-2 text-right text-green-700">{run.recipes_added}</td>
                     <td className="px-4 py-2 text-right text-blue-700">{run.recipes_updated}</td>
                     <td className="px-4 py-2 text-right text-gray-400">{run.recipes_skipped_non_recipe}</td>
+                    <td className="px-4 py-2 text-right">
+                      {run.status === "running" && (
+                        <button
+                          onClick={() => handleCancel(run.id)}
+                          disabled={cancelling === run.id}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                        >
+                          {cancelling === run.id ? "Cancelling…" : "Cancel"}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

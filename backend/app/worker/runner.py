@@ -17,6 +17,16 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+_cancel_flags: set[str] = set()
+
+
+def request_cancel(run_id: str) -> None:
+    _cancel_flags.add(run_id)
+
+
+def _is_cancelled(run_id: str) -> bool:
+    return run_id in _cancel_flags
+
 
 def _to_int_minutes(val) -> Optional[int]:
     if val is None:
@@ -57,6 +67,8 @@ async def _process_url(
     semaphore: asyncio.Semaphore,
 ):
     async with semaphore:
+        if _is_cancelled(str(run.id)):
+            return
         try:
             html = await adapter.fetch_raw_html(url)
 
@@ -200,7 +212,12 @@ async def run_scrape_for_source(source_id: str, run_id: str, db: AsyncSession):
         await asyncio.gather(*tasks, return_exceptions=True)
 
         source.last_scraped_at = datetime.now(timezone.utc)
-        run.status = ScrapeStatus.success
+        run_id_str = str(run.id)
+        if _is_cancelled(run_id_str):
+            _cancel_flags.discard(run_id_str)
+            run.status = ScrapeStatus.cancelled
+        else:
+            run.status = ScrapeStatus.success
         run.finished_at = datetime.now(timezone.utc)
         await db.commit()
 

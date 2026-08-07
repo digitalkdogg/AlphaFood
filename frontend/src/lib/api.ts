@@ -99,7 +99,7 @@ export interface ScrapeRun {
   source_id: string | null;
   started_at: string;
   finished_at: string | null;
-  status: ScrapeStatus;
+  status: ScrapeStatus | "cancelled";
   recipes_found: number;
   recipes_added: number;
   recipes_updated: number;
@@ -141,6 +141,10 @@ export async function triggerSourceScrape(id: string): Promise<{ run_id: string;
 
 export async function triggerScrapeAll(): Promise<{ run_id: string; status: string }> {
   return apiFetch("/api/admin/scrape/all", { method: "POST" });
+}
+
+export async function cancelScrapeRun(runId: string): Promise<ScrapeRun> {
+  return apiFetch(`/api/admin/scrape/runs/${runId}/cancel`, { method: "POST" });
 }
 
 export async function getScrapeRuns(sourceId?: string): Promise<ScrapeRun[]> {

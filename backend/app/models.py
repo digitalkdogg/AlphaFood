@@ -24,6 +24,7 @@ class ScrapeStatus(str, enum.Enum):
     success = "success"
     partial = "partial"
     error = "error"
+    cancelled = "cancelled"
 
 
 class User(Base):
