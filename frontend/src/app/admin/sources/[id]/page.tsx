@@ -13,13 +13,14 @@ const SCRAPER_LABELS: Record<ScraperType, string> = {
 };
 
 function statusBadge(status: ScrapeRun["status"]) {
-  const map = {
+  const map: Record<string, string> = {
     running: "bg-blue-100 text-blue-800",
     success: "bg-green-100 text-green-800",
     partial: "bg-yellow-100 text-yellow-800",
     error: "bg-red-100 text-red-800",
+    cancelled: "bg-gray-100 text-gray-600",
   };
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status]}`}>{status}</span>;
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] ?? "bg-gray-100 text-gray-600"}`}>{status}</span>;
 }
 
 export default function SourceDetailPage() {
