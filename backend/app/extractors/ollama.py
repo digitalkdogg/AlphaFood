@@ -25,9 +25,9 @@ Return a JSON object with exactly these fields:
   "servings": <string or null>,
   "is_dairy_free": <boolean or null (null if cannot determine)>,
   "mammal_status": <string: exactly one of "safe", "questionable", or "contains_mammal".
-    - "contains_mammal": one or more ingredients are CLEARLY and DEFINITIVELY a mammal product with no plant-based ambiguity — beef, pork, veal, bacon, ham, lamb, venison, bison, buffalo, goat meat, rabbit, lard, tallow, suet, bone broth (unless specified vegetable), gelatin (unless specified plant-based), rennet.
-    - "questionable": one or more ingredients COULD be mammal-derived OR plant-based depending on the brand used — butter (could be vegan butter), milk (could be oat/almond/soy milk), cream (could be coconut cream), cheese (could be vegan cheese), yogurt (could be coconut yogurt), broth or stock (could be vegetable), ghee (could be vegan ghee).
-    - "safe": no mammal-derived ingredients detected, or all ambiguous ingredients are explicitly specified as plant-based (e.g. "oat milk", "vegan butter", "vegetable broth").>
+    - "contains_mammal": one or more ingredients are a mammal-derived product. This includes ALL of the following unless they have an explicit plant-based qualifier in the ingredient name itself: beef, pork, veal, bacon, ham, lamb, venison, bison, buffalo, goat meat, rabbit, lard, tallow, suet, rennet, AND all dairy — milk, butter, cream, cheese, yogurt, ghee, whey, sour cream, half-and-half, buttermilk, kefir, gelatin. If the recipe just says "yogurt", "butter", "milk", "cream", or "cheese" with no qualifier, that is "contains_mammal".
+    - "questionable": an ingredient name is genuinely ambiguous and cannot be determined from the text alone — e.g. plain "broth" or "stock" (could be beef or vegetable), "shortening" (could be lard or vegetable), "natural flavors", "lactic acid". Do NOT use this for dairy words — those belong in "contains_mammal".
+    - "safe": all ingredients are clearly plant-based, poultry, seafood, or the ambiguous dairy/meat words are explicitly qualified as plant-based in the ingredient name (e.g. "oat milk", "coconut yogurt", "vegan butter", "vegetable broth", "plant-based cream cheese").>
 }
 
 If is_recipe is false, still populate "title" with whatever the page is actually about.
