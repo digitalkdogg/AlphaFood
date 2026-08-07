@@ -1,7 +1,7 @@
 """add disclaimer column to recipes
 
 Revision ID: 0002_add_disclaimer
-Revises: 0001_initial
+Revises: 0003_skipped_urls_reason
 Create Date: 2026-08-06
 """
 
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0002_add_disclaimer"
-down_revision = "0001_initial"
+down_revision = "0003_skipped_urls_reason"
 branch_labels = None
 depends_on = None
 
