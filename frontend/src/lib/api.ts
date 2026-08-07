@@ -219,6 +219,7 @@ export interface SkippedUrl {
   source_id: string;
   url: string;
   reason: string | null;
+  permanent: boolean;
   skipped_at: string;
 }
 
@@ -243,6 +244,10 @@ export async function getSkippedUrls(params: {
 
 export async function removeSkippedUrl(id: string): Promise<void> {
   return apiFetch(`/api/admin/skipped/${id}`, { method: "DELETE" });
+}
+
+export async function markSkippedUrlPermanent(id: string): Promise<SkippedUrl> {
+  return apiFetch(`/api/admin/skipped/${id}/permanent`, { method: "PUT" });
 }
 
 // ── Public sources (no auth required) ────────────────────────────────────────

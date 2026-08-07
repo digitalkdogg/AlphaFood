@@ -43,5 +43,23 @@ async def remove_skipped_url(
     row = result.scalar_one_or_none()
     if not row:
         raise HTTPException(status_code=404, detail="Not found")
+    if row.permanent:
+        raise HTTPException(status_code=400, detail="Cannot re-queue a permanently skipped URL")
     await db.delete(row)
     await db.commit()
+
+
+@router.put("/{skipped_id}/permanent", response_model=SkippedUrlOut)
+async def mark_permanent(
+    skipped_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(SkippedUrl).where(SkippedUrl.id == skipped_id))
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Not found")
+    row.permanent = True
+    await db.commit()
+    await db.refresh(row)
+    return row
