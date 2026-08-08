@@ -26,7 +26,7 @@ export function useFavorites() {
       } else {
         next.add(id);
       }
-      localStorage.setItem(KEY, JSON.stringify([...next]));
+      localStorage.setItem(KEY, JSON.stringify(Array.from(next)));
       return next;
     });
   }, []);
