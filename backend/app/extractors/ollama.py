@@ -24,11 +24,13 @@ Return a JSON object with exactly these fields:
   "cook_time": <integer minutes or null>,
   "servings": <string or null>,
   "is_dairy_free": <boolean or null (null if cannot determine)>,
+  "meal_category": <string or null: best single category for this recipe — one of "breakfast", "lunch", "dinner", "snack", "dessert", "appetizer", "side dish", "soup", "salad", "drink" — or null if it genuinely does not fit any category>,
   "mammal_status": <string: exactly one of "safe", "questionable", or "contains_mammal".
     IMPORTANT: base this ONLY on ingredients that are explicitly written in the recipe text. Do NOT infer or assume ingredients based on the dish name, cuisine, or traditional preparation methods. For example, if a refried bean recipe does not list lard, do not assume lard is present.
     - "contains_mammal": one or more ingredients are explicitly listed and are a mammal-derived product. This includes: beef, pork, veal, bacon, ham, lamb, venison, bison, buffalo, goat meat, rabbit, lard, tallow, suet, rennet, gelatin, worcestershire sauce, AND these specific dairy products — milk, butter, cream, yogurt, ghee, whey, sour cream, half-and-half, buttermilk, kefir, cream cheese, mascarpone, ricotta, creme fraiche. Only mark "contains_mammal" if the ingredient is actually present in the listed ingredients. IMPORTANT: style or flavor adjectives such as "greek", "plain", "vanilla", "low-fat", "non-fat", "full-fat", "whole", "skim", "2%", "unsalted", "salted", "whipped", "organic", "raw" do NOT make a dairy ingredient plant-based. "Greek yogurt" is still yogurt. "Unsalted butter" is still butter. Only qualifiers that explicitly indicate a plant-based source (coconut, oat, almond, soy, rice, cashew, vegan, dairy-free, plant-based) change the classification.
     - "questionable": an ingredient that is explicitly listed but could reasonably be mammal-derived or plant-based depending on brand. This includes: plain "cheese" or "shredded cheese" (easy to substitute with vegan cheese), plain "broth" or "stock" without a qualifier, "shortening", "natural flavors", "lactic acid".
-    - "safe": all explicitly listed ingredients are plant-based, poultry, seafood, or any ambiguous ingredients are qualified as plant-based (e.g. "oat milk", "coconut yogurt", "vegan butter", "vegetable broth", "dairy-free cheese").>
+    - "safe": all explicitly listed ingredients are plant-based, poultry, seafood, or any ambiguous ingredients are qualified as plant-based (e.g. "oat milk", "coconut yogurt", "vegan butter", "vegetable broth", "dairy-free cheese").>,
+  "questionable_ingredients": [<list the exact ingredient names (as written in the recipe) that caused a "questionable" rating. Empty array if mammal_status is not "questionable".>]
 }
 
 If is_recipe is false, still populate "title" with whatever the page is actually about.

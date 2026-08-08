@@ -68,6 +68,7 @@ class RecipeListItem(BaseModel):
     prep_time: Optional[int]
     cook_time: Optional[int]
     is_dairy_free: Optional[bool]
+    meal_category: Optional[str] = None
     needs_review: bool
     published: bool
     created_at: datetime
@@ -87,6 +88,7 @@ class RecipeOut(BaseModel):
     servings: Optional[str]
     image_url: Optional[str]
     is_dairy_free: Optional[bool]
+    meal_category: Optional[str] = None
     mentions_mammal_ingredients: bool
     disclaimer: Optional[str] = None
     needs_review: bool

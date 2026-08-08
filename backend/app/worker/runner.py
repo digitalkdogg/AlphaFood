@@ -39,6 +39,19 @@ def _to_int_minutes(val) -> Optional[int]:
     return None
 
 
+_VALID_CATEGORIES = {
+    "breakfast", "lunch", "dinner", "snack", "dessert",
+    "appetizer", "side dish", "soup", "salad", "drink",
+}
+
+
+def _parse_category(val) -> Optional[str]:
+    if not val:
+        return None
+    cat = str(val).strip().lower()
+    return cat if cat in _VALID_CATEGORIES else None
+
+
 def _clean_ingredients(val) -> Optional[list]:
     if not isinstance(val, list):
         return None
@@ -119,12 +132,26 @@ async def _process_url(
                 return
 
             mentions_mammal = mammal_status == "questionable"
-            disclaimer = (
-                "Some ingredients in this recipe may be mammal-derived depending on the brand used "
-                "(e.g. butter, milk, cream, cheese, or broth). Verify that plant-based versions are "
-                "used before serving to someone with Alpha-Gal Syndrome."
-                if mammal_status == "questionable" else None
-            )
+            if mammal_status == "questionable":
+                flagged = [
+                    str(i).strip() for i in data.get("questionable_ingredients", [])
+                    if str(i).strip()
+                ]
+                if flagged:
+                    ingredient_list = ", ".join(flagged)
+                    disclaimer = (
+                        f"The following ingredient(s) may be mammal-derived depending on the brand: "
+                        f"{ingredient_list}. Verify that plant-based versions are used before serving "
+                        f"to someone with Alpha-Gal Syndrome."
+                    )
+                else:
+                    disclaimer = (
+                        "One or more ingredients in this recipe may be mammal-derived depending on the "
+                        "brand used. Verify that plant-based versions are used before serving to someone "
+                        "with Alpha-Gal Syndrome."
+                    )
+            else:
+                disclaimer = None
 
             raw_servings = data.get("servings")
             servings = str(raw_servings) if raw_servings is not None else None
@@ -142,6 +169,7 @@ async def _process_url(
                     existing.servings = servings
                     existing.image_url = image_url or existing.image_url
                     existing.is_dairy_free = data.get("is_dairy_free")
+                    existing.meal_category = _parse_category(data.get("meal_category"))
                     existing.mentions_mammal_ingredients = mentions_mammal
                     existing.disclaimer = disclaimer
                     existing.needs_review = True
@@ -160,6 +188,7 @@ async def _process_url(
                         servings=servings,
                         image_url=image_url,
                         is_dairy_free=data.get("is_dairy_free"),
+                        meal_category=_parse_category(data.get("meal_category")),
                         mentions_mammal_ingredients=mentions_mammal,
                         disclaimer=disclaimer,
                         needs_review=True,
@@ -316,12 +345,26 @@ async def import_single_url(url: str, source_id: uuid.UUID, db: AsyncSession) ->
         return {"status": "skipped", "reason": "Contains mammal ingredients — recipe not safe for Alpha-Gal Syndrome", "recipe": None}
 
     mentions_mammal = mammal_status == "questionable"
-    disclaimer = (
-        "Some ingredients in this recipe may be mammal-derived depending on the brand used "
-        "(e.g. butter, milk, cream, cheese, or broth). Verify that plant-based versions are "
-        "used before serving to someone with Alpha-Gal Syndrome."
-        if mammal_status == "questionable" else None
-    )
+    if mammal_status == "questionable":
+        flagged = [
+            str(i).strip() for i in data.get("questionable_ingredients", [])
+            if str(i).strip()
+        ]
+        if flagged:
+            ingredient_list = ", ".join(flagged)
+            disclaimer = (
+                f"The following ingredient(s) may be mammal-derived depending on the brand: "
+                f"{ingredient_list}. Verify that plant-based versions are used before serving "
+                f"to someone with Alpha-Gal Syndrome."
+            )
+        else:
+            disclaimer = (
+                "One or more ingredients in this recipe may be mammal-derived depending on the "
+                "brand used. Verify that plant-based versions are used before serving to someone "
+                "with Alpha-Gal Syndrome."
+            )
+    else:
+        disclaimer = None
 
     now = datetime.now(timezone.utc)
     raw_servings = data.get("servings")
@@ -340,6 +383,7 @@ async def import_single_url(url: str, source_id: uuid.UUID, db: AsyncSession) ->
             existing.servings = servings
             existing.image_url = image_url or existing.image_url
             existing.is_dairy_free = data.get("is_dairy_free")
+            existing.meal_category = _parse_category(data.get("meal_category"))
             existing.mentions_mammal_ingredients = mentions_mammal
             existing.disclaimer = disclaimer
             existing.needs_review = True
@@ -359,6 +403,7 @@ async def import_single_url(url: str, source_id: uuid.UUID, db: AsyncSession) ->
                 servings=servings,
                 image_url=image_url,
                 is_dairy_free=data.get("is_dairy_free"),
+                meal_category=_parse_category(data.get("meal_category")),
                 mentions_mammal_ingredients=mentions_mammal,
                 disclaimer=disclaimer,
                 needs_review=True,

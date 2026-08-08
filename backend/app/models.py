@@ -68,6 +68,7 @@ class Recipe(Base):
     servings = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
     is_dairy_free = Column(Boolean, nullable=True)
+    meal_category = Column(String, nullable=True)
     mentions_mammal_ingredients = Column(Boolean, default=False, nullable=False)
     disclaimer = Column(Text, nullable=True)
     needs_review = Column(Boolean, default=True, nullable=False)

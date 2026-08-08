@@ -38,10 +38,17 @@ export default async function RecipeDetailPage({
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Disclaimer */}
-        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+        {/* General disclaimer */}
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
           <strong>Verify before cooking:</strong> This recipe was extracted automatically. Always check all ingredients — especially hidden mammal derivatives (gelatin, lard, rennet, dairy) — against the <a href={recipe.source_url} target="_blank" rel="noopener noreferrer" className="underline">original source</a> and your own tolerance.
         </div>
+
+        {/* Ingredient-specific warning */}
+        {recipe.disclaimer && (
+          <div className="mb-6 bg-orange-50 border border-orange-300 rounded-lg p-4 text-sm text-orange-900">
+            <strong>⚠ Ingredient warning:</strong> {recipe.disclaimer}
+          </div>
+        )}
 
         {/* Hero image */}
         {recipe.image_url && (

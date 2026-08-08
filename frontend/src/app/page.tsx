@@ -5,23 +5,35 @@ import { getPublicRecipes, RecipeListItem, getPublicSources, Source } from "@/li
 import Link from "next/link";
 import Image from "next/image";
 
+const CATEGORIES = [
+  { value: "", label: "All" },
+  { value: "breakfast", label: "Breakfast" },
+  { value: "lunch", label: "Lunch" },
+  { value: "dinner", label: "Dinner" },
+  { value: "snack", label: "Snack" },
+  { value: "appetizer", label: "Appetizer" },
+  { value: "side dish", label: "Side Dish" },
+  { value: "soup", label: "Soup" },
+  { value: "salad", label: "Salad" },
+  { value: "dessert", label: "Dessert" },
+  { value: "drink", label: "Drink" },
+];
+
 function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
-  const totalTime =
-    (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0);
+  const totalTime = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0);
 
   return (
     <Link href={`/recipes/${recipe.id}`} className="group block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
       <div className="relative h-48 bg-brand-50">
         {recipe.image_url ? (
-          <Image
-            src={recipe.image_url}
-            alt={recipe.title}
-            fill
-            className="object-cover"
-            unoptimized
-          />
+          <Image src={recipe.image_url} alt={recipe.title} fill className="object-cover" unoptimized />
         ) : (
           <div className="flex items-center justify-center h-full text-5xl">🍽️</div>
+        )}
+        {recipe.meal_category && (
+          <span className="absolute top-2 left-2 bg-white/90 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full capitalize shadow-sm">
+            {recipe.meal_category}
+          </span>
         )}
       </div>
       <div className="p-4">
@@ -33,9 +45,7 @@ function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
             <span className="bg-brand-100 text-brand-800 px-2 py-0.5 rounded-full">Dairy-Free</span>
           )}
           {totalTime > 0 && (
-            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-              {totalTime} min
-            </span>
+            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{totalTime} min</span>
           )}
         </div>
       </div>
@@ -51,6 +61,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
   const [dairyFree, setDairyFree] = useState<boolean | undefined>();
   const [maxTime, setMaxTime] = useState<number | undefined>();
   const [sourceId, setSourceId] = useState<string>("");
@@ -65,6 +76,7 @@ export default function HomePage() {
         source_id: sourceId || undefined,
         is_dairy_free: dairyFree,
         max_time: maxTime,
+        meal_category: category || undefined,
         page,
         limit,
       });
@@ -73,64 +85,72 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [query, sourceId, dairyFree, maxTime, page]);
+  }, [query, sourceId, dairyFree, maxTime, category, page]);
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [fetchRecipes]);
-
-  useEffect(() => {
-    getPublicSources().catch(() => []).then(setSources);
-  }, []);
+  useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
+  useEffect(() => { getPublicSources().catch(() => []).then(setSources); }, []);
 
   const totalPages = Math.ceil(total / limit);
 
+  function setFilter<T>(setter: (v: T) => void, value: T) {
+    setter(value);
+    setPage(1);
+  }
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="bg-brand-700 text-white">
         <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">🌿 AlphaFood</h1>
             <p className="text-brand-100 text-sm mt-0.5">Alpha-Gal Friendly Recipes</p>
           </div>
-          <Link href="/admin" className="text-sm text-brand-200 hover:text-white transition-colors">
-            Admin →
-          </Link>
+          <Link href="/admin" className="text-sm text-brand-200 hover:text-white transition-colors">Admin →</Link>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Disclaimer */}
         <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
           <strong>Important:</strong> Recipes are extracted automatically. Always verify ingredients — especially hidden mammal derivatives like gelatin, lard, rennet, and dairy — against the original source and your own tolerance.
         </div>
 
-        {/* Filters */}
+        {/* Category pills */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {CATEGORIES.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setFilter(setCategory, value)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                category === value
+                  ? "bg-brand-600 text-white"
+                  : "bg-white border border-gray-200 text-gray-600 hover:border-brand-400 hover:text-brand-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Secondary filters */}
         <div className="mb-6 bg-white rounded-xl border border-gray-100 shadow-sm p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <input
             type="search"
             placeholder="Search recipes…"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+            onChange={(e) => setFilter(setQuery, e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 col-span-full lg:col-span-1"
           />
           <select
             value={sourceId}
-            onChange={(e) => { setSourceId(e.target.value); setPage(1); }}
+            onChange={(e) => setFilter(setSourceId, e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">All Sources</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           <select
             value={dairyFree === undefined ? "" : String(dairyFree)}
-            onChange={(e) => {
-              setDairyFree(e.target.value === "" ? undefined : e.target.value === "true");
-              setPage(1);
-            }}
+            onChange={(e) => setFilter(setDairyFree, e.target.value === "" ? undefined : e.target.value === "true")}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">Any Dairy Status</option>
@@ -139,10 +159,7 @@ export default function HomePage() {
           </select>
           <select
             value={maxTime ?? ""}
-            onChange={(e) => {
-              setMaxTime(e.target.value ? Number(e.target.value) : undefined);
-              setPage(1);
-            }}
+            onChange={(e) => setFilter(setMaxTime, e.target.value ? Number(e.target.value) : undefined)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">Any Time</option>
@@ -152,14 +169,10 @@ export default function HomePage() {
           </select>
         </div>
 
-        {/* Results count */}
         {!loading && (
-          <p className="text-sm text-gray-500 mb-4">
-            {total} recipe{total !== 1 ? "s" : ""} found
-          </p>
+          <p className="text-sm text-gray-500 mb-4">{total} recipe{total !== 1 ? "s" : ""} found</p>
         )}
 
-        {/* Grid */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -183,26 +196,13 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="mt-8 flex justify-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-50"
-            >
-              Previous
-            </button>
-            <span className="px-4 py-2 text-sm text-gray-600">
-              {page} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-50"
-            >
-              Next
-            </button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-50">Previous</button>
+            <span className="px-4 py-2 text-sm text-gray-600">{page} / {totalPages}</span>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm disabled:opacity-40 hover:bg-gray-50">Next</button>
           </div>
         )}
       </div>

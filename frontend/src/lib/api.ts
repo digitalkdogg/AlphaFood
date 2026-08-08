@@ -54,6 +54,7 @@ export interface RecipeListItem {
   prep_time: number | null;
   cook_time: number | null;
   is_dairy_free: boolean | null;
+  meal_category: string | null;
   needs_review: boolean;
   published: boolean;
   created_at: string;
@@ -210,6 +211,7 @@ export async function getPublicRecipes(params: {
   source_id?: string;
   is_dairy_free?: boolean;
   max_time?: number;
+  meal_category?: string;
   page?: number;
   limit?: number;
 }): Promise<RecipesPage> {
@@ -218,6 +220,7 @@ export async function getPublicRecipes(params: {
   if (params.source_id) qs.set("source_id", params.source_id);
   if (params.is_dairy_free !== undefined) qs.set("is_dairy_free", String(params.is_dairy_free));
   if (params.max_time) qs.set("max_time", String(params.max_time));
+  if (params.meal_category) qs.set("meal_category", params.meal_category);
   if (params.page) qs.set("page", String(params.page));
   if (params.limit) qs.set("limit", String(params.limit));
   return apiFetch(`/api/recipes/?${qs}`);

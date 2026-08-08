@@ -227,6 +227,7 @@ async def list_recipes(
     source_id: Optional[uuid.UUID] = None,
     is_dairy_free: Optional[bool] = None,
     max_time: Optional[int] = None,
+    meal_category: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(24, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -247,6 +248,9 @@ async def list_recipes(
         query = query.where(
             (Recipe.prep_time + Recipe.cook_time) <= max_time
         )
+
+    if meal_category:
+        query = query.where(Recipe.meal_category == meal_category)
 
     total_result = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_result.scalar_one()
