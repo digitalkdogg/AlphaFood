@@ -2,9 +2,9 @@ import type { Recipe } from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { RecipeActions } from "./RecipeActions";
 
 async function fetchRecipe(id: string): Promise<Recipe> {
-  // Use internal URL for server-side fetches (works in Docker); fallback to public URL
   const base =
     process.env.INTERNAL_API_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
@@ -30,7 +30,7 @@ export default async function RecipeDetailPage({
 
   return (
     <div className="min-h-screen">
-      <header className="bg-brand-700 text-white">
+      <header className="bg-brand-700 text-white no-print">
         <div className="max-w-4xl mx-auto px-4 py-6 flex items-center gap-4">
           <Link href="/" className="text-brand-200 hover:text-white text-sm">← All Recipes</Link>
           <h1 className="text-xl font-bold">🌿 AlphaFood</h1>
@@ -38,6 +38,12 @@ export default async function RecipeDetailPage({
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Title + actions row */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+          <h1 className="text-3xl font-bold">{recipe.title}</h1>
+          <RecipeActions recipeId={recipe.id} />
+        </div>
+
         {/* General disclaimer */}
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
           <strong>Verify before cooking:</strong> This recipe was extracted automatically. Always check all ingredients — especially hidden mammal derivatives (gelatin, lard, rennet, dairy) — against the <a href={recipe.source_url} target="_blank" rel="noopener noreferrer" className="underline">original source</a> and your own tolerance.
@@ -52,17 +58,18 @@ export default async function RecipeDetailPage({
 
         {/* Hero image */}
         {recipe.image_url && (
-          <div className="relative h-72 rounded-xl overflow-hidden mb-6">
+          <div className="relative h-72 rounded-xl overflow-hidden mb-6 no-print">
             <Image src={recipe.image_url} alt={recipe.title} fill className="object-cover" unoptimized />
           </div>
         )}
-
-        <h1 className="text-3xl font-bold mb-4">{recipe.title}</h1>
 
         {/* Meta row */}
         <div className="flex flex-wrap gap-3 mb-6 text-sm">
           {recipe.is_dairy_free && (
             <span className="bg-brand-100 text-brand-800 px-3 py-1 rounded-full font-medium">✓ Dairy-Free</span>
+          )}
+          {recipe.meal_category && (
+            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full capitalize">{recipe.meal_category}</span>
           )}
           {recipe.prep_time && (
             <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">Prep: {recipe.prep_time} min</span>

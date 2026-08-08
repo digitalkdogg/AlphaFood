@@ -79,6 +79,7 @@ export interface Recipe {
   servings: string | null;
   image_url: string | null;
   is_dairy_free: boolean | null;
+  meal_category: string | null;
   mentions_mammal_ingredients: boolean;
   disclaimer: string | null;
   needs_review: boolean;
