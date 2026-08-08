@@ -104,6 +104,36 @@ async def delete_recipe(
     await db.commit()
 
 
+@admin_router.post("/backfill-categories", response_model=dict)
+async def backfill_categories(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(
+        select(func.count()).select_from(Recipe).where(Recipe.meal_category.is_(None))
+    )
+    count = result.scalar_one()
+    if count > 0:
+        background_tasks.add_task(_do_backfill_categories)
+    return {"queued": count}
+
+
+async def _do_backfill_categories():
+    from app.database import AsyncSessionLocal
+    from app.extractors.ollama import classify_category
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Recipe).where(Recipe.meal_category.is_(None))
+        )
+        recipes = result.scalars().all()
+        for recipe in recipes:
+            cat = await classify_category(recipe.title, recipe.ingredients or [])
+            if cat:
+                recipe.meal_category = cat
+                await db.commit()
+
+
 @admin_router.post("/import", response_model=ImportResult)
 async def import_recipe(
     body: ImportRequest,

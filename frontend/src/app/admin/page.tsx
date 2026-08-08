@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, cancelScrapeRun, ScrapeRun } from "@/lib/api";
+import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, cancelScrapeRun, backfillCategories, ScrapeRun } from "@/lib/api";
 import Link from "next/link";
 
 function StatCard({ label, value, href }: { label: string; value: number | string; href?: string }) {
@@ -33,6 +33,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ sources: 0, review: 0, published: 0 });
   const [runs, setRuns] = useState<ScrapeRun[]>([]);
   const [scraping, setScraping] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [toast, setToast] = useState("");
 
@@ -67,6 +68,23 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleBackfill() {
+    setBackfilling(true);
+    try {
+      const result = await backfillCategories();
+      setToast(
+        result.queued > 0
+          ? `Categorizing ${result.queued} recipe${result.queued !== 1 ? "s" : ""} in the background…`
+          : "All recipes already have categories"
+      );
+      setTimeout(() => setToast(""), 6000);
+    } catch {
+      setToast("Failed to start category backfill");
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
   async function handleScrapeAll() {
     setScraping(true);
     try {
@@ -85,13 +103,22 @@ export default function AdminDashboard() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Dashboard</h2>
-        <button
-          onClick={handleScrapeAll}
-          disabled={scraping}
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors self-start sm:self-auto"
-        >
-          {scraping ? "Starting…" : "Scrape All Sources"}
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleBackfill}
+            disabled={backfilling}
+            className="bg-white border border-brand-300 hover:border-brand-500 text-brand-700 text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+          >
+            {backfilling ? "Queuing…" : "Categorize Recipes"}
+          </button>
+          <button
+            onClick={handleScrapeAll}
+            disabled={scraping}
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+          >
+            {scraping ? "Starting…" : "Scrape All Sources"}
+          </button>
+        </div>
       </div>
 
       {toast && (

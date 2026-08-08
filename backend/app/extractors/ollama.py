@@ -50,6 +50,38 @@ async def warmup() -> None:
         logger.warning(f"Ollama warmup failed (will proceed anyway): {e}")
 
 
+async def classify_category(title: str, ingredients: list) -> str | None:
+    """Ask Ollama for just the meal category of an existing recipe."""
+    ingredient_names = ", ".join(
+        str(i.get("item", "")).strip()
+        for i in (ingredients or [])
+        if isinstance(i, dict) and str(i.get("item", "")).strip()
+    ) or "unknown"
+    prompt = (
+        f'Given this recipe, return a JSON object with a single field "meal_category".\n'
+        f'Choose exactly one of: "breakfast", "lunch", "dinner", "snack", "appetizer", '
+        f'"side dish", "soup", "salad", "dessert", "drink" — or null if none fit.\n\n'
+        f'Title: {title}\n'
+        f'Main ingredients: {ingredient_names}\n\n'
+        f'Return only: {{"meal_category": "..."}}'
+    )
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            r = await client.post(
+                f"{settings.ollama_url}/api/generate",
+                json={"model": settings.ollama_model, "prompt": prompt, "system": SYSTEM_PROMPT,
+                      "stream": False, "format": "json", "keep_alive": "10m"},
+            )
+            r.raise_for_status()
+            data = json.loads(r.json().get("response", "{}"))
+            cat = str(data.get("meal_category") or "").strip().lower()
+            valid = {"breakfast","lunch","dinner","snack","appetizer","side dish","soup","salad","dessert","drink"}
+            return cat if cat in valid else None
+    except Exception as e:
+        logger.warning(f"Category classification failed: {e}")
+        return None
+
+
 async def extract_recipe(text: str) -> tuple[dict | None, str]:
     """Return (recipe_data, skip_reason). recipe_data is None when skipped."""
     truncated = text[:6000]

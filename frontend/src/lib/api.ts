@@ -204,6 +204,10 @@ export async function reprocessRecipe(id: string): Promise<Recipe> {
   return apiFetch(`/api/admin/recipes/${id}/reprocess`, { method: "POST" });
 }
 
+export async function backfillCategories(): Promise<{ queued: number }> {
+  return apiFetch("/api/admin/recipes/backfill-categories", { method: "POST" });
+}
+
 // ── Public recipes ────────────────────────────────────────────────────────────
 
 export async function getPublicRecipes(params: {
