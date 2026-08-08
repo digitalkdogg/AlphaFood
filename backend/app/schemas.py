@@ -115,6 +115,16 @@ class ScrapeStartResponse(BaseModel):
     status: str = "started"
 
 
+class ImportRequest(BaseModel):
+    url: str
+
+
+class ImportResult(BaseModel):
+    status: str  # "imported", "updated", "skipped"
+    reason: Optional[str] = None
+    recipe: Optional[RecipeOut] = None
+
+
 class RecipesPage(BaseModel):
     items: list[RecipeListItem]
     total: int

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Recipe
-from app.schemas import RecipeOut, RecipeListItem, RecipesPage
+from app.schemas import RecipeOut, RecipeListItem, RecipesPage, ImportRequest, ImportResult
 from app.deps import get_current_user
 
 admin_router = APIRouter(prefix="/api/admin/recipes", tags=["admin-recipes"])
@@ -102,6 +102,17 @@ async def delete_recipe(
         raise HTTPException(status_code=404, detail="Recipe not found")
     await db.delete(recipe)
     await db.commit()
+
+
+@admin_router.post("/import", response_model=ImportResult)
+async def import_recipe(
+    body: ImportRequest,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    from app.worker.runner import import_single_url
+    result = await import_single_url(body.url.strip(), db)
+    return result
 
 
 @admin_router.post("/{recipe_id}/reprocess", response_model=RecipeOut)

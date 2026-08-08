@@ -229,6 +229,107 @@ async def run_scrape_for_source(source_id: str, run_id: str, db: AsyncSession):
         await db.commit()
 
 
+async def import_single_url(url: str, db: AsyncSession) -> dict:
+    """Fetch, extract, and save a single recipe URL. Returns {status, reason, recipe}."""
+    from app.models import Source, ScraperType
+
+    src_result = await db.execute(select(Source).where(Source.name == "Manual Imports"))
+    source = src_result.scalar_one_or_none()
+    if not source:
+        source = Source(
+            name="Manual Imports",
+            url="manual://import",
+            scraper_type=ScraperType.single_page,
+            active=False,
+        )
+        db.add(source)
+        await db.commit()
+        await db.refresh(source)
+
+    from app.scrapers.base import HEADERS
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True, timeout=30) as client:
+            r = await client.get(url)
+            r.raise_for_status()
+            html = r.text
+    except Exception as e:
+        return {"status": "skipped", "reason": f"Could not fetch URL: {e}", "recipe": None}
+
+    image_url = _extract_image_url(html)
+    cleaned = extract_text(html)
+    if not cleaned:
+        return {"status": "skipped", "reason": "No extractable text found on that page", "recipe": None}
+
+    await ollama_warmup()
+    data, skip_reason = await extract_recipe(cleaned)
+    if data is None:
+        return {"status": "skipped", "reason": skip_reason or "Ollama did not find a recipe on that page", "recipe": None}
+
+    mammal_status = str(data.get("mammal_status", "safe")).lower()
+    if mammal_status not in ("safe", "questionable", "contains_mammal"):
+        mammal_status = "safe"
+
+    if mammal_status == "contains_mammal":
+        return {"status": "skipped", "reason": "Contains mammal ingredients — recipe not safe for Alpha-Gal Syndrome", "recipe": None}
+
+    mentions_mammal = mammal_status == "questionable"
+    disclaimer = (
+        "Some ingredients in this recipe may be mammal-derived depending on the brand used "
+        "(e.g. butter, milk, cream, cheese, or broth). Verify that plant-based versions are "
+        "used before serving to someone with Alpha-Gal Syndrome."
+        if mammal_status == "questionable" else None
+    )
+
+    now = datetime.now(timezone.utc)
+    raw_servings = data.get("servings")
+    servings = str(raw_servings) if raw_servings is not None else None
+
+    async with db.begin_nested():
+        existing_result = await db.execute(select(Recipe).where(Recipe.source_url == url))
+        existing = existing_result.scalar_one_or_none()
+
+        if existing:
+            existing.title = data.get("title") or existing.title
+            existing.ingredients = data.get("ingredients")
+            existing.instructions = _to_str_list(data.get("instructions"))
+            existing.prep_time = _to_int_minutes(data.get("prep_time"))
+            existing.cook_time = _to_int_minutes(data.get("cook_time"))
+            existing.servings = servings
+            existing.image_url = image_url or existing.image_url
+            existing.is_dairy_free = data.get("is_dairy_free")
+            existing.mentions_mammal_ingredients = mentions_mammal
+            existing.disclaimer = disclaimer
+            existing.needs_review = True
+            existing.extracted_at = now
+            existing.updated_at = now
+            await db.commit()
+            return {"status": "updated", "reason": None, "recipe": existing}
+        else:
+            recipe = Recipe(
+                source_id=source.id,
+                source_url=url,
+                title=data.get("title", "Untitled Recipe"),
+                ingredients=data.get("ingredients"),
+                instructions=_to_str_list(data.get("instructions")),
+                prep_time=_to_int_minutes(data.get("prep_time")),
+                cook_time=_to_int_minutes(data.get("cook_time")),
+                servings=servings,
+                image_url=image_url,
+                is_dairy_free=data.get("is_dairy_free"),
+                mentions_mammal_ingredients=mentions_mammal,
+                disclaimer=disclaimer,
+                needs_review=True,
+                published=False,
+                extracted_at=now,
+            )
+            db.add(recipe)
+            await db.commit()
+            await db.refresh(recipe)
+            return {"status": "imported", "reason": None, "recipe": recipe}
+
+
 async def run_scrape_all_active(run_id: str, db: AsyncSession):
     result = await db.execute(select(Source).where(Source.active == True))  # noqa: E712
     sources = result.scalars().all()

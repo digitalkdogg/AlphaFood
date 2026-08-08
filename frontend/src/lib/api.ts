@@ -139,6 +139,16 @@ export async function triggerSourceScrape(id: string): Promise<{ run_id: string;
   return apiFetch(`/api/admin/sources/${id}/scrape`, { method: "POST" });
 }
 
+export interface ImportResult {
+  status: "imported" | "updated" | "skipped";
+  reason: string | null;
+  recipe: Recipe | null;
+}
+
+export async function importRecipeUrl(url: string): Promise<ImportResult> {
+  return apiFetch("/api/admin/recipes/import", { method: "POST", body: JSON.stringify({ url }) });
+}
+
 export async function triggerScrapeAll(): Promise<{ run_id: string; status: string }> {
   return apiFetch("/api/admin/scrape/all", { method: "POST" });
 }
