@@ -7,7 +7,7 @@ from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Recipe, ScrapeRun, ScrapeStatus
+from app.models import Recipe, ScrapeRun, ScrapeStatus, SkippedUrl
 from app.schemas import RecipeOut, RecipeListItem, RecipesPage, ImportRequest, ImportResult
 from app.deps import get_current_user
 
@@ -119,6 +119,31 @@ async def import_recipe(
     await db.refresh(run)
     background_tasks.add_task(run_import_background, body.url.strip(), str(run.id))
     return ImportResult(status="queued", run_id=str(run.id))
+
+
+@admin_router.post("/{recipe_id}/ignore", status_code=204)
+async def ignore_recipe(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    existing = await db.execute(select(SkippedUrl).where(SkippedUrl.url == recipe.source_url))
+    skipped = existing.scalar_one_or_none()
+    if skipped:
+        skipped.permanent = True
+    else:
+        db.add(SkippedUrl(
+            source_id=recipe.source_id,
+            url=recipe.source_url,
+            reason="Ignored by admin",
+            permanent=True,
+        ))
+    await db.delete(recipe)
+    await db.commit()
 
 
 @admin_router.post("/{recipe_id}/reprocess", response_model=RecipeOut)

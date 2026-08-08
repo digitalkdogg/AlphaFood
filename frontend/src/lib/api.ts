@@ -195,6 +195,10 @@ export async function deleteRecipe(id: string): Promise<void> {
   return apiFetch(`/api/admin/recipes/${id}`, { method: "DELETE" });
 }
 
+export async function ignoreRecipe(id: string): Promise<void> {
+  return apiFetch(`/api/admin/recipes/${id}/ignore`, { method: "POST" });
+}
+
 export async function reprocessRecipe(id: string): Promise<Recipe> {
   return apiFetch(`/api/admin/recipes/${id}/reprocess`, { method: "POST" });
 }

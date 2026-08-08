@@ -7,6 +7,7 @@ import {
   publishRecipe,
   rejectRecipe,
   deleteRecipe,
+  ignoreRecipe,
   RecipeListItem,
   Recipe,
 } from "@/lib/api";
@@ -157,6 +158,18 @@ export default function ReviewQueuePage() {
     }
   }
 
+  async function handleIgnore(id: string, title: string) {
+    if (!confirm(`Ignore "${title}" forever? It will never appear in scrapes again.`)) return;
+    try {
+      await ignoreRecipe(id);
+      notify("Recipe ignored permanently");
+      setExpanded((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      load();
+    } catch {
+      notify("Failed to ignore recipe");
+    }
+  }
+
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -223,6 +236,10 @@ export default function ReviewQueuePage() {
                         <button onClick={() => handlePublish(recipe.id)}
                           className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                           Publish
+                        </button>
+                        <button onClick={() => handleIgnore(recipe.id, recipe.title)}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+                          Ignore Forever
                         </button>
                         <button onClick={() => handleDelete(recipe.id, recipe.title)}
                           className="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
