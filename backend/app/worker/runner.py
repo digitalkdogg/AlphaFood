@@ -39,6 +39,16 @@ def _to_int_minutes(val) -> Optional[int]:
     return None
 
 
+def _clean_ingredients(val) -> Optional[list]:
+    if not isinstance(val, list):
+        return None
+    cleaned = [
+        ing for ing in val
+        if isinstance(ing, dict) and any(str(v).strip() for v in ing.values())
+    ]
+    return cleaned or None
+
+
 def _to_str_list(val) -> Optional[list]:
     if val is None:
         return None
@@ -125,7 +135,7 @@ async def _process_url(
 
                 if existing:
                     existing.title = data.get("title", existing.title) or existing.title
-                    existing.ingredients = data.get("ingredients")
+                    existing.ingredients = _clean_ingredients(data.get("ingredients"))
                     existing.instructions = _to_str_list(data.get("instructions"))
                     existing.prep_time = _to_int_minutes(data.get("prep_time"))
                     existing.cook_time = _to_int_minutes(data.get("cook_time"))
@@ -143,7 +153,7 @@ async def _process_url(
                         source_id=source_id,
                         source_url=url,
                         title=data.get("title", "Untitled Recipe"),
-                        ingredients=data.get("ingredients"),
+                        ingredients=_clean_ingredients(data.get("ingredients")),
                         instructions=_to_str_list(data.get("instructions")),
                         prep_time=_to_int_minutes(data.get("prep_time")),
                         cook_time=_to_int_minutes(data.get("cook_time")),
@@ -323,7 +333,7 @@ async def import_single_url(url: str, source_id: uuid.UUID, db: AsyncSession) ->
 
         if existing:
             existing.title = data.get("title") or existing.title
-            existing.ingredients = data.get("ingredients")
+            existing.ingredients = _clean_ingredients(data.get("ingredients"))
             existing.instructions = _to_str_list(data.get("instructions"))
             existing.prep_time = _to_int_minutes(data.get("prep_time"))
             existing.cook_time = _to_int_minutes(data.get("cook_time"))
@@ -342,7 +352,7 @@ async def import_single_url(url: str, source_id: uuid.UUID, db: AsyncSession) ->
                 source_id=source_id,
                 source_url=url,
                 title=data.get("title", "Untitled Recipe"),
-                ingredients=data.get("ingredients"),
+                ingredients=_clean_ingredients(data.get("ingredients")),
                 instructions=_to_str_list(data.get("instructions")),
                 prep_time=_to_int_minutes(data.get("prep_time")),
                 cook_time=_to_int_minutes(data.get("cook_time")),

@@ -147,7 +147,7 @@ async def _do_reprocess(recipe_id: str):
     from app.extractors.cleaner import extract_text
     from app.extractors.ollama import extract_recipe
     from app.scrapers.base import HEADERS
-    from app.worker.runner import _to_int_minutes, _to_str_list
+    from app.worker.runner import _to_int_minutes, _to_str_list, _clean_ingredients
     import httpx
 
     async with AsyncSessionLocal() as db:
@@ -176,7 +176,7 @@ async def _do_reprocess(recipe_id: str):
             raw_servings = data.get("servings")
 
             recipe.title = data.get("title") or recipe.title
-            recipe.ingredients = data.get("ingredients")
+            recipe.ingredients = _clean_ingredients(data.get("ingredients"))
             recipe.instructions = _to_str_list(data.get("instructions"))
             recipe.prep_time = _to_int_minutes(data.get("prep_time"))
             recipe.cook_time = _to_int_minutes(data.get("cook_time"))
