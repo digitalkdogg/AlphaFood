@@ -140,7 +140,8 @@ export async function triggerSourceScrape(id: string): Promise<{ run_id: string;
 }
 
 export interface ImportResult {
-  status: "imported" | "updated" | "skipped";
+  status: "queued" | "imported" | "updated" | "skipped";
+  run_id: string | null;
   reason: string | null;
   recipe: Recipe | null;
 }

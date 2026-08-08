@@ -229,10 +229,8 @@ async def run_scrape_for_source(source_id: str, run_id: str, db: AsyncSession):
         await db.commit()
 
 
-async def import_single_url(url: str, db: AsyncSession) -> dict:
-    """Fetch, extract, and save a single recipe URL. Returns {status, reason, recipe}."""
+async def _ensure_manual_source(db: AsyncSession):
     from app.models import Source, ScraperType
-
     src_result = await db.execute(select(Source).where(Source.name == "Manual Imports"))
     source = src_result.scalar_one_or_none()
     if not source:
@@ -245,6 +243,39 @@ async def import_single_url(url: str, db: AsyncSession) -> dict:
         db.add(source)
         await db.commit()
         await db.refresh(source)
+    return source
+
+
+async def run_import_background(url: str, run_id: str) -> None:
+    from app.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        run_result = await db.execute(select(ScrapeRun).where(ScrapeRun.id == uuid.UUID(run_id)))
+        run = run_result.scalar_one_or_none()
+        if not run:
+            return
+        try:
+            source = await _ensure_manual_source(db)
+            result = await import_single_url(url, source.id, db)
+            if result["status"] == "imported":
+                run.recipes_added = 1
+            elif result["status"] == "updated":
+                run.recipes_updated = 1
+            else:
+                run.recipes_skipped_non_recipe = 1
+                run.error_message = result["reason"]
+            run.status = ScrapeStatus.success if result["status"] != "skipped" else ScrapeStatus.partial
+            run.finished_at = datetime.now(timezone.utc)
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Background import failed for {url}: {e}")
+            run.status = ScrapeStatus.error
+            run.error_message = str(e)
+            run.finished_at = datetime.now(timezone.utc)
+            await db.commit()
+
+
+async def import_single_url(url: str, source_id: uuid.UUID, db: AsyncSession) -> dict:
+    """Fetch, extract, and save a single recipe URL. Returns {status, reason, recipe}."""
 
     from app.scrapers.base import HEADERS
     import httpx
@@ -308,7 +339,7 @@ async def import_single_url(url: str, db: AsyncSession) -> dict:
             return {"status": "updated", "reason": None, "recipe": existing}
         else:
             recipe = Recipe(
-                source_id=source.id,
+                source_id=source_id,
                 source_url=url,
                 title=data.get("title", "Untitled Recipe"),
                 ingredients=data.get("ingredients"),

@@ -7,7 +7,7 @@ from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Recipe
+from app.models import Recipe, ScrapeRun, ScrapeStatus
 from app.schemas import RecipeOut, RecipeListItem, RecipesPage, ImportRequest, ImportResult
 from app.deps import get_current_user
 
@@ -107,12 +107,18 @@ async def delete_recipe(
 @admin_router.post("/import", response_model=ImportResult)
 async def import_recipe(
     body: ImportRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    from app.worker.runner import import_single_url
-    result = await import_single_url(body.url.strip(), db)
-    return result
+    from app.worker.runner import _ensure_manual_source, run_import_background
+    source = await _ensure_manual_source(db)
+    run = ScrapeRun(source_id=source.id, status=ScrapeStatus.running, recipes_found=1)
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+    background_tasks.add_task(run_import_background, body.url.strip(), str(run.id))
+    return ImportResult(status="queued", run_id=str(run.id))
 
 
 @admin_router.post("/{recipe_id}/reprocess", response_model=RecipeOut)

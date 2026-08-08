@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, cancelScrapeRun, importRecipeUrl, ScrapeRun } from "@/lib/api";
+import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, cancelScrapeRun, ScrapeRun } from "@/lib/api";
 import Link from "next/link";
 
 function StatCard({ label, value, href }: { label: string; value: number | string; href?: string }) {
@@ -34,9 +34,6 @@ export default function AdminDashboard() {
   const [runs, setRuns] = useState<ScrapeRun[]>([]);
   const [scraping, setScraping] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
-  const [importUrl, setImportUrl] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ status: string; reason: string | null; title: string | null } | null>(null);
   const [toast, setToast] = useState("");
 
   async function loadData() {
@@ -67,29 +64,6 @@ export default function AdminDashboard() {
       setToast("Failed to cancel scrape");
     } finally {
       setCancelling(null);
-    }
-  }
-
-  async function handleImport(e: React.FormEvent) {
-    e.preventDefault();
-    if (!importUrl.trim()) return;
-    setImporting(true);
-    setImportResult(null);
-    try {
-      const result = await importRecipeUrl(importUrl.trim());
-      setImportResult({
-        status: result.status,
-        reason: result.reason,
-        title: result.recipe?.title ?? null,
-      });
-      if (result.status !== "skipped") {
-        setImportUrl("");
-        loadData();
-      }
-    } catch {
-      setImportResult({ status: "error", reason: "Request failed — check the URL and try again", title: null });
-    } finally {
-      setImporting(false);
     }
   }
 
@@ -130,42 +104,6 @@ export default function AdminDashboard() {
         <StatCard label="Active Sources" value={stats.sources} href="/admin/sources" />
         <StatCard label="Needs Review" value={stats.review} href="/admin/review" />
         <StatCard label="Published Recipes" value={stats.published} />
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-semibold mb-3">Import a Recipe URL</h3>
-        <form onSubmit={handleImport} className="flex gap-2">
-          <input
-            type="url"
-            value={importUrl}
-            onChange={(e) => { setImportUrl(e.target.value); setImportResult(null); }}
-            placeholder="https://www.example.com/recipe/..."
-            required
-            disabled={importing}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:bg-gray-50"
-          />
-          <button
-            type="submit"
-            disabled={importing || !importUrl.trim()}
-            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap"
-          >
-            {importing ? "Importing…" : "Import"}
-          </button>
-        </form>
-        {importing && (
-          <p className="text-xs text-gray-400 mt-2">Fetching and analysing with Ollama — this may take up to a minute…</p>
-        )}
-        {importResult && (
-          <div className={`mt-3 text-sm px-4 py-3 rounded-lg ${
-            importResult.status === "imported" ? "bg-green-50 text-green-800 border border-green-200" :
-            importResult.status === "updated"  ? "bg-blue-50 text-blue-800 border border-blue-200" :
-                                                 "bg-red-50 text-red-800 border border-red-200"
-          }`}>
-            {importResult.status === "imported" && <>Recipe <strong>{importResult.title}</strong> imported — check the <a href="/admin/review" className="underline font-medium">Review Queue</a>.</>}
-            {importResult.status === "updated"  && <>Recipe <strong>{importResult.title}</strong> already existed and has been updated in the <a href="/admin/review" className="underline font-medium">Review Queue</a>.</>}
-            {(importResult.status === "skipped" || importResult.status === "error") && <>{importResult.reason}</>}
-          </div>
-        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">

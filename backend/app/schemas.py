@@ -120,7 +120,8 @@ class ImportRequest(BaseModel):
 
 
 class ImportResult(BaseModel):
-    status: str  # "imported", "updated", "skipped"
+    status: str  # "queued", "imported", "updated", "skipped"
+    run_id: Optional[str] = None
     reason: Optional[str] = None
     recipe: Optional[RecipeOut] = None
 
