@@ -76,3 +76,15 @@ async def get_run(
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Scrape run not found")
     return run
+
+
+@router.get("/schedule")
+async def get_schedule(_=Depends(get_current_user)):
+    from app.worker.scheduler import scheduler
+    from app.config import settings
+    job = scheduler.get_job("scrape_all")
+    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+    return {
+        "next_run_at": next_run,
+        "interval_hours": settings.scrape_interval_hours,
+    }

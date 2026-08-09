@@ -160,6 +160,10 @@ export async function cancelScrapeRun(runId: string): Promise<ScrapeRun> {
   return apiFetch(`/api/admin/scrape/runs/${runId}/cancel`, { method: "POST" });
 }
 
+export async function getScheduleStatus(): Promise<{ next_run_at: string | null; interval_hours: number }> {
+  return apiFetch("/api/admin/scrape/schedule");
+}
+
 export async function getScrapeRuns(sourceId?: string): Promise<ScrapeRun[]> {
   const q = sourceId ? `?source_id=${sourceId}` : "";
   return apiFetch(`/api/admin/scrape/runs${q}`);

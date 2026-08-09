@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSources, updateSource, getScrapeRuns, triggerSourceScrape, Source, ScrapeRun, ScraperType } from "@/lib/api";
+import { getSources, updateSource, getScrapeRuns, triggerSourceScrape, getScheduleStatus, Source, ScrapeRun, ScraperType } from "@/lib/api";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -27,15 +27,23 @@ export default function SourceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [source, setSource] = useState<Source | null>(null);
   const [runs, setRuns] = useState<ScrapeRun[]>([]);
+  const [nextRun, setNextRun] = useState<{ next_run_at: string | null; interval_hours: number } | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Source>>({});
   const [toast, setToast] = useState("");
 
   async function load() {
-    const [sources, runList] = await Promise.all([getSources(), getScrapeRuns(id)]);
-    const s = sources.find((x) => x.id === id);
-    if (s) { setSource(s); setForm(s); }
-    setRuns(runList);
+    const [sources, runList, schedule] = await Promise.allSettled([
+      getSources(),
+      getScrapeRuns(id),
+      getScheduleStatus(),
+    ]);
+    if (sources.status === "fulfilled") {
+      const s = sources.value.find((x) => x.id === id);
+      if (s) { setSource(s); setForm(s); }
+    }
+    if (runList.status === "fulfilled") setRuns(runList.value);
+    if (schedule.status === "fulfilled") setNextRun(schedule.value);
   }
 
   useEffect(() => { load(); }, [id]);
@@ -134,8 +142,20 @@ export default function SourceDetailPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div><p className="text-gray-400 text-xs mb-0.5">Type</p><p>{SCRAPER_LABELS[source.scraper_type]}</p></div>
               <div><p className="text-gray-400 text-xs mb-0.5">Status</p><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${source.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"}`}>{source.active ? "Active" : "Inactive"}</span></div>
-              <div><p className="text-gray-400 text-xs mb-0.5">Frequency</p><p>{source.frequency_hours ? `${source.frequency_hours}h` : "Default"}</p></div>
               <div><p className="text-gray-400 text-xs mb-0.5">Last Scraped</p><p>{source.last_scraped_at ? new Date(source.last_scraped_at).toLocaleString() : "Never"}</p></div>
+              <div>
+                <p className="text-gray-400 text-xs mb-0.5">Est. Next Scrape</p>
+                {nextRun?.next_run_at ? (
+                  <p title={new Date(nextRun.next_run_at).toLocaleString()}>
+                    {new Date(nextRun.next_run_at).toLocaleString()}
+                  </p>
+                ) : (
+                  <p className="text-gray-400">—</p>
+                )}
+                {nextRun && (
+                  <p className="text-gray-400 text-xs mt-0.5">every {nextRun.interval_hours}h</p>
+                )}
+              </div>
             </div>
           </div>
         )}

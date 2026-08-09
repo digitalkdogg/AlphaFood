@@ -24,15 +24,25 @@ logger = logging.getLogger(__name__)
 
 async def _seed_admin():
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User))
-        if result.first() is None:
-            admin = User(
+        result = await db.execute(select(User).where(User.email == settings.admin_email))
+        existing = result.scalar_one_or_none()
+        if existing:
+            # Update password in case it changed in .env
+            existing.hashed_password = hash_password(settings.admin_password)
+            await db.commit()
+            logger.info(f"Admin user verified: {settings.admin_email}")
+        else:
+            # Remove any stale admin accounts and create the configured one
+            await db.execute(select(User))
+            stale = await db.execute(select(User).where(User.email != settings.admin_email))
+            for user in stale.scalars().all():
+                await db.delete(user)
+            db.add(User(
                 email=settings.admin_email,
                 hashed_password=hash_password(settings.admin_password),
-            )
-            db.add(admin)
+            ))
             await db.commit()
-            logger.info(f"Seeded admin user: {settings.admin_email}")
+            logger.info(f"Replaced admin user with: {settings.admin_email}")
 
 
 @asynccontextmanager
