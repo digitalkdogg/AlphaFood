@@ -97,6 +97,7 @@ export default function HomePage() {
   const [dairyFree, setDairyFree] = useState<boolean | undefined>();
   const [maxTime, setMaxTime] = useState<number | undefined>();
   const [sourceId, setSourceId] = useState<string>("");
+  const [protein, setProtein] = useState<string>("");
 
   const { isFavorite, toggle } = useFavorites();
 
@@ -123,6 +124,7 @@ export default function HomePage() {
           is_dairy_free: dairyFree,
           max_time: maxTime,
           meal_category: category || undefined,
+          protein: protein || undefined,
           page,
           limit,
         });
@@ -132,7 +134,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [query, sourceId, dairyFree, maxTime, category, page, favoritesMode]);
+  }, [query, sourceId, dairyFree, maxTime, category, protein, page, favoritesMode]);
 
   useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
   useEffect(() => { getPublicSources().catch(() => []).then(setSources); }, []);
@@ -202,41 +204,58 @@ export default function HomePage() {
 
         {/* Secondary filters — hidden in favorites mode */}
         {!favoritesMode && (
-          <div className="mb-6 bg-white rounded-xl border border-gray-100 shadow-sm p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="mb-6 bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+            {/* Search — full width */}
             <input
               type="search"
               placeholder="Search recipes…"
               value={query}
               onChange={(e) => setFilter(setQuery, e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 col-span-full lg:col-span-1"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
-            <select
-              value={sourceId}
-              onChange={(e) => setFilter(setSourceId, e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">All Sources</option>
-              {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <select
-              value={dairyFree === undefined ? "" : String(dairyFree)}
-              onChange={(e) => setFilter(setDairyFree, e.target.value === "" ? undefined : e.target.value === "true")}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">Any Dairy Status</option>
-              <option value="true">Dairy-Free</option>
-              <option value="false">Contains Dairy</option>
-            </select>
-            <select
-              value={maxTime ?? ""}
-              onChange={(e) => setFilter(setMaxTime, e.target.value ? Number(e.target.value) : undefined)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">Any Time</option>
-              <option value="30">Under 30 min</option>
-              <option value="60">Under 60 min</option>
-              <option value="120">Under 2 hours</option>
-            </select>
+            {/* Dropdowns row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <select
+                value={protein}
+                onChange={(e) => setFilter(setProtein, e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">All Proteins</option>
+                <option value="chicken">Chicken</option>
+                <option value="turkey">Turkey</option>
+                <option value="fish">Fish</option>
+                <option value="seafood">Seafood</option>
+                <option value="beef">Beef</option>
+                <option value="pork">Pork</option>
+              </select>
+              <select
+                value={dairyFree === undefined ? "" : String(dairyFree)}
+                onChange={(e) => setFilter(setDairyFree, e.target.value === "" ? undefined : e.target.value === "true")}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Any Dairy Status</option>
+                <option value="true">Dairy-Free</option>
+                <option value="false">Contains Dairy</option>
+              </select>
+              <select
+                value={maxTime ?? ""}
+                onChange={(e) => setFilter(setMaxTime, e.target.value ? Number(e.target.value) : undefined)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Any Time</option>
+                <option value="30">Under 30 min</option>
+                <option value="60">Under 60 min</option>
+                <option value="120">Under 2 hours</option>
+              </select>
+              <select
+                value={sourceId}
+                onChange={(e) => setFilter(setSourceId, e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">All Sources</option>
+                {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
           </div>
         )}
 

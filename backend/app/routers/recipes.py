@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy import select, func, or_, cast, String
+from sqlalchemy import select, func, or_, and_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -251,6 +251,16 @@ async def _do_reprocess(recipe_id: str):
 
 # ── Public endpoints ─────────────────────────────────────────────────────────
 
+_PROTEIN_TERMS: dict[str, list[str]] = {
+    "chicken":  ["chicken"],
+    "turkey":   ["turkey"],
+    "fish":     ["fish", "salmon", "tuna", "cod", "tilapia", "halibut", "trout", "snapper", "mahi", "bass", "flounder"],
+    "seafood":  ["shrimp", "crab", "lobster", "scallop", "clam", "mussel", "oyster", "squid", "calamari", "prawn"],
+    "beef":     ["beef", "steak", "ground beef", "brisket"],
+    "pork":     ["pork", "ham", "bacon", "sausage"],
+}
+
+
 @public_router.get("/", response_model=RecipesPage)
 async def list_recipes(
     q: Optional[str] = None,
@@ -258,6 +268,7 @@ async def list_recipes(
     is_dairy_free: Optional[bool] = None,
     max_time: Optional[int] = None,
     meal_category: Optional[str] = None,
+    protein: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(24, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -281,6 +292,14 @@ async def list_recipes(
 
     if meal_category:
         query = query.where(Recipe.meal_category == meal_category)
+
+    if protein and protein in _PROTEIN_TERMS:
+        terms = _PROTEIN_TERMS[protein]
+        conditions = []
+        for t in terms:
+            conditions.append(Recipe.title.ilike(f"%{t}%"))
+            conditions.append(cast(Recipe.ingredients, String).ilike(f"%{t}%"))
+        query = query.where(or_(*conditions))
 
     total_result = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_result.scalar_one()
