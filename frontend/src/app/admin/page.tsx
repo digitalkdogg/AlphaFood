@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, cancelScrapeRun, backfillCategories, ScrapeRun } from "@/lib/api";
+import { getAdminRecipes, getScrapeRuns, getSources, triggerScrapeAll, cancelScrapeRun, backfillCategories, backfillTips, ScrapeRun } from "@/lib/api";
 import Link from "next/link";
 
 function StatCard({ label, value, href }: { label: string; value: number | string; href?: string }) {
@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [runs, setRuns] = useState<ScrapeRun[]>([]);
   const [scraping, setScraping] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [generatingTips, setGeneratingTips] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [toast, setToast] = useState("");
 
@@ -85,6 +86,23 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleBackfillTips() {
+    setGeneratingTips(true);
+    try {
+      const result = await backfillTips();
+      setToast(
+        result.queued > 0
+          ? `Generating substitution tips for ${result.queued} recipe${result.queued !== 1 ? "s" : ""} in the background…`
+          : "All published recipes already have substitution tips"
+      );
+      setTimeout(() => setToast(""), 6000);
+    } catch {
+      setToast("Failed to start tip generation");
+    } finally {
+      setGeneratingTips(false);
+    }
+  }
+
   async function handleScrapeAll() {
     setScraping(true);
     try {
@@ -103,13 +121,20 @@ export default function AdminDashboard() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Dashboard</h2>
-        <div className="flex gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           <button
             onClick={handleBackfill}
             disabled={backfilling}
             className="bg-white border border-brand-300 hover:border-brand-500 text-brand-700 text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
           >
             {backfilling ? "Queuing…" : "Categorize Recipes"}
+          </button>
+          <button
+            onClick={handleBackfillTips}
+            disabled={generatingTips}
+            className="bg-white border border-green-300 hover:border-green-500 text-green-700 text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+          >
+            {generatingTips ? "Queuing…" : "Generate Tips"}
           </button>
           <button
             onClick={handleScrapeAll}

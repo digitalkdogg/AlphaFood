@@ -82,6 +82,7 @@ export interface Recipe {
   meal_category: string | null;
   mentions_mammal_ingredients: boolean;
   disclaimer: string | null;
+  substitution_tips: string[] | null;
   needs_review: boolean;
   published: boolean;
   extracted_at: string | null;
@@ -211,6 +212,10 @@ export async function reprocessRecipe(id: string): Promise<Recipe> {
 
 export async function backfillCategories(): Promise<{ queued: number }> {
   return apiFetch("/api/admin/recipes/backfill-categories", { method: "POST" });
+}
+
+export async function backfillTips(): Promise<{ queued: number }> {
+  return apiFetch("/api/admin/recipes/backfill-tips", { method: "POST" });
 }
 
 // ── Public recipes ────────────────────────────────────────────────────────────

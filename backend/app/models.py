@@ -71,6 +71,7 @@ class Recipe(Base):
     meal_category = Column(String, nullable=True)
     mentions_mammal_ingredients = Column(Boolean, default=False, nullable=False)
     disclaimer = Column(Text, nullable=True)
+    substitution_tips = Column(JSON, nullable=True)
     needs_review = Column(Boolean, default=True, nullable=False)
     published = Column(Boolean, default=False, nullable=False)
     extracted_at = Column(DateTime(timezone=True), nullable=True)

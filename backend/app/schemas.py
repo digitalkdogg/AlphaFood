@@ -91,6 +91,7 @@ class RecipeOut(BaseModel):
     meal_category: Optional[str] = None
     mentions_mammal_ingredients: bool
     disclaimer: Optional[str] = None
+    substitution_tips: Optional[list[str]] = None
     needs_review: bool
     published: bool
     extracted_at: Optional[datetime]

@@ -125,6 +125,23 @@ export default async function RecipeDetailPage({
           </div>
         </div>
 
+        {/* Substitution tips */}
+        {recipe.substitution_tips && recipe.substitution_tips.length > 0 && (
+          <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-5">
+            <h2 className="text-base font-semibold text-green-900 mb-3">
+              Alpha-Gal Substitution Suggestions
+            </h2>
+            <ul className="space-y-2">
+              {recipe.substitution_tips.map((tip, i) => (
+                <li key={i} className="flex gap-2 text-sm text-green-900">
+                  <span className="mt-0.5 shrink-0">💡</span>
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Source attribution */}
         <div className="mt-10 pt-6 border-t border-gray-100 text-sm text-gray-500">
           <p>

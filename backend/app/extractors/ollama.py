@@ -82,6 +82,71 @@ async def classify_category(title: str, ingredients: list) -> str | None:
         return None
 
 
+TIPS_SYSTEM_PROMPT = (
+    "You are a helpful assistant for people with Alpha-Gal Syndrome (AGS), "
+    "a condition caused by a tick bite that results in an allergy to mammal-derived products. "
+    "Return ONLY valid JSON. No explanation, markdown, or text outside the JSON object."
+)
+
+TIPS_SCHEMA = """
+Given a recipe's ingredients, identify any ingredients that an Alpha-Gal Syndrome patient should be cautious about and suggest a safe, specific alternative for each one.
+
+Alpha-Gal Syndrome patients must avoid: all red meat (beef, pork, lamb, venison, bison, etc.), mammal dairy (milk, butter, cream, yogurt, cheese, ghee, etc.), gelatin, lard, tallow, rennet, worcestershire sauce.
+They CAN safely eat: chicken, turkey, fish, seafood, plant-based ingredients, oat/almond/coconut/soy alternatives.
+
+Return a JSON object:
+{
+  "tips": [
+    "Consider replacing <original ingredient> with <specific safe alternative> — <brief reason if helpful>"
+  ]
+}
+
+Rules:
+- Only flag ingredients that are genuinely problematic for AGS. Do not flag safe ingredients.
+- Be specific in your suggestions (e.g. "Violife mozzarella" or "oat milk" rather than just "a dairy-free option").
+- Keep each tip to one sentence.
+- Return an empty array if there are no problematic ingredients.
+"""
+
+
+async def generate_substitution_tips(title: str, ingredients: list) -> list[str]:
+    """Return a list of substitution tip strings for AGS-unsafe ingredients, or [] if none."""
+    if not ingredients:
+        return []
+    ingredient_lines = "\n".join(
+        "- " + " ".join(filter(None, [
+            str(i.get("quantity", "")).strip(),
+            str(i.get("unit", "")).strip(),
+            str(i.get("item", "")).strip(),
+        ]))
+        for i in ingredients
+        if isinstance(i, dict) and str(i.get("item", "")).strip()
+    )
+    if not ingredient_lines:
+        return []
+    prompt = f"{TIPS_SCHEMA}\n\nRecipe: {title}\nIngredients:\n{ingredient_lines}"
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            r = await client.post(
+                f"{settings.ollama_url}/api/generate",
+                json={
+                    "model": settings.ollama_model,
+                    "prompt": prompt,
+                    "system": TIPS_SYSTEM_PROMPT,
+                    "stream": False,
+                    "format": "json",
+                    "keep_alive": "10m",
+                },
+            )
+            r.raise_for_status()
+            data = json.loads(r.json().get("response", "{}"))
+            tips = data.get("tips", [])
+            return [str(t).strip() for t in tips if str(t).strip()]
+    except Exception as e:
+        logger.warning(f"Substitution tip generation failed for '{title}': {e}")
+        return []
+
+
 async def extract_recipe(text: str) -> tuple[dict | None, str]:
     """Return (recipe_data, skip_reason). recipe_data is None when skipped."""
     truncated = text[:6000]

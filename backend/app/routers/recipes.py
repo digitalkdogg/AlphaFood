@@ -134,6 +134,29 @@ async def _do_backfill_categories():
                 await db.commit()
 
 
+@admin_router.post("/backfill-tips", response_model=dict)
+async def backfill_tips(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(
+        select(func.count()).select_from(Recipe).where(
+            Recipe.published == True,  # noqa: E712
+            Recipe.substitution_tips.is_(None),
+        )
+    )
+    count = result.scalar_one()
+    if count > 0:
+        background_tasks.add_task(_do_backfill_tips)
+    return {"queued": count}
+
+
+async def _do_backfill_tips():
+    from app.worker.tips import run_substitution_tips
+    await run_substitution_tips()
+
+
 @admin_router.post("/import", response_model=ImportResult)
 async def import_recipe(
     body: ImportRequest,

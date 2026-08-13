@@ -15,8 +15,22 @@ def start_scheduler():
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    scheduler.add_job(
+        _substitution_tips_job,
+        "cron",
+        hour=2,
+        minute=0,
+        id="substitution_tips",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
     scheduler.start()
-    logger.info(f"Scheduler started: scraping every {settings.scrape_interval_hours}h")
+    logger.info(f"Scheduler started: scraping every {settings.scrape_interval_hours}h, tips nightly at 2am")
+
+
+async def _substitution_tips_job():
+    from app.worker.tips import run_substitution_tips
+    await run_substitution_tips()
 
 
 async def _scrape_all_job():
