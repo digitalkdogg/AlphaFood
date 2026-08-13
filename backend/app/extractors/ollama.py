@@ -89,23 +89,25 @@ TIPS_SYSTEM_PROMPT = (
 )
 
 TIPS_SCHEMA = """
-Given a recipe's ingredients, identify any ingredients that an Alpha-Gal Syndrome patient should be cautious about and suggest a safe, specific alternative for each one.
+Given a recipe's ingredient list, identify any ingredients that an Alpha-Gal Syndrome patient should be cautious about and suggest a safe, specific alternative for each one.
+
+CRITICAL RULE: Base your response ONLY on ingredients that are explicitly written in the ingredient list below. Do NOT infer, assume, or guess ingredients based on the dish name, cuisine type, or traditional preparation methods. If butter is not listed, do not mention butter. If cheese is not listed, do not mention cheese. Only flag what is actually there.
 
 Alpha-Gal Syndrome patients must avoid: all red meat (beef, pork, lamb, venison, bison, etc.), mammal dairy (milk, butter, cream, yogurt, cheese, ghee, etc.), gelatin, lard, tallow, rennet, worcestershire sauce.
-They CAN safely eat: chicken, turkey, fish, seafood, plant-based ingredients, oat/almond/coconut/soy alternatives.
+They CAN safely eat: chicken, turkey, fish, seafood, and all plant-based ingredients.
 
 Return a JSON object:
 {
   "tips": [
-    "Consider replacing <original ingredient> with <specific safe alternative> — <brief reason if helpful>"
+    "Consider replacing <exact ingredient as written> with <specific safe alternative>"
   ]
 }
 
 Rules:
-- Only flag ingredients that are genuinely problematic for AGS. Do not flag safe ingredients.
-- Be specific in your suggestions (e.g. "Violife mozzarella" or "oat milk" rather than just "a dairy-free option").
-- Keep each tip to one sentence.
-- Return an empty array if there are no problematic ingredients.
+- ONLY flag ingredients that appear verbatim in the list provided. If the list has no problematic ingredients, return an empty array.
+- Be specific (e.g. "Violife mozzarella" or "oat milk" rather than "a dairy-free option").
+- One tip per problematic ingredient, one sentence each.
+- Return an empty array if there are no problematic ingredients in the list.
 """
 
 
