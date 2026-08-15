@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import select, or_, cast, String
 
 from app.extractors.ollama import generate_substitution_tips
 
@@ -17,7 +17,10 @@ async def run_substitution_tips():
         result = await db.execute(
             select(Recipe).where(
                 Recipe.published == True,  # noqa: E712
-                Recipe.substitution_tips.is_(None),
+                or_(
+                    Recipe.substitution_tips.is_(None),
+                    cast(Recipe.substitution_tips, String) == "null",
+                ),
             )
         )
         recipes = result.scalars().all()

@@ -16,13 +16,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 async def main(limit: int = 10):
     from app.database import AsyncSessionLocal
     from app.models import Recipe
-    from sqlalchemy import select
+    from sqlalchemy import select, and_, cast, String
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Recipe.id, Recipe.title, Recipe.substitution_tips)
-            .where(Recipe.substitution_tips.isnot(None))
-            .where(Recipe.published == True)  # noqa: E712
+            .where(
+                Recipe.published == True,  # noqa: E712
+                Recipe.substitution_tips.isnot(None),
+                cast(Recipe.substitution_tips, String) != "null",
+            )
             .limit(limit)
         )
         rows = result.all()

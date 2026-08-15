@@ -51,7 +51,8 @@ async def regenerate_all():
 
     print("Clearing all existing tips...")
     async with AsyncSessionLocal() as db:
-        await db.execute(update(Recipe).values(substitution_tips=None))
+        from sqlalchemy import text
+        await db.execute(text("UPDATE recipes SET substitution_tips = NULL"))
         await db.commit()
 
     print("Running tip generation for all published recipes...")
